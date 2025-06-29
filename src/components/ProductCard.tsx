@@ -1,8 +1,8 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Plus } from "lucide-react";
+import colors from "@/theme/colors";
 
 interface ProductVariant {
   name: string;
@@ -32,10 +32,28 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const discount = Math.round(((product.price - product.offerPrice) / product.price) * 100);
+  // Helper function to get the lowest price for display
+  const getLowestPrice = () => {
+    if (product.variants && product.variants.length > 0) {
+      return Math.min(...product.variants.map(v => v.offerPrice));
+    }
+    return product.offerPrice;
+  };
+
+  // Helper function to get the highest regular price for discount calculation
+  const getHighestRegularPrice = () => {
+    if (product.variants && product.variants.length > 0) {
+      return Math.max(...product.variants.map(v => v.price));
+    }
+    return product.price;
+  };
+
+  const lowestPrice = getLowestPrice();
+  const highestRegularPrice = getHighestRegularPrice();
+  const discount = Math.round(((highestRegularPrice - lowestPrice) / highestRegularPrice) * 100);
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 group">
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 group" style={{ backgroundColor: colors.backgrounds.card }}>
       <div className="relative">
         <img
           src={product.image}
@@ -43,7 +61,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {discount > 0 && (
-          <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600">
+          <Badge className="absolute top-2 left-2" style={{ backgroundColor: colors.status.error }}>
             -{discount}%
           </Badge>
         )}
@@ -62,13 +80,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-orange-500">
-              PKR {product.offerPrice}
-            </span>
-            {product.price !== product.offerPrice && (
-              <span className="text-sm text-gray-500 line-through">
-                PKR {product.price}
+            {product.variants && product.variants.length > 0 ? (
+              <span className="text-xl font-bold" style={{ color: colors.primary[500] }}>
+                From PKR {lowestPrice}
               </span>
+            ) : (
+              <>
+                <span className="text-xl font-bold" style={{ color: colors.primary[500] }}>
+                  PKR {product.offerPrice}
+                </span>
+                {product.price !== product.offerPrice && (
+                  <span className="text-sm text-gray-500 line-through">
+                    PKR {product.price}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -104,7 +130,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         )}
         
-        <Button className="w-full bg-orange-500 hover:bg-orange-600 transform hover:scale-105 transition-all">
+        <Button 
+          className="w-full transform hover:scale-105 transition-all hover:opacity-90" 
+          style={{ backgroundColor: colors.primary[500] }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add to Cart
         </Button>

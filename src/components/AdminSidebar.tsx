@@ -12,6 +12,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import colors from "@/theme/colors";
 
 const AdminSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -32,7 +33,10 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className={`bg-gray-800 text-white h-screen flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+    <div 
+      className={`text-white h-screen flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}
+      style={{ backgroundColor: colors.backgrounds.sidebar }}
+    >
       <div className="p-4">
         <div className="flex items-center justify-between">
           <h2 className={`font-bold text-xl ${collapsed ? 'hidden' : 'block'}`}>
@@ -56,9 +60,12 @@ const AdminSidebar = () => {
             to={item.path}
             className={({ isActive }) =>
               `flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors ${
-                isActive ? 'bg-orange-600 text-white' : ''
+                isActive ? 'text-white' : ''
               }`
             }
+            style={({ isActive }) => ({
+              backgroundColor: isActive ? colors.primary[600] : 'transparent'
+            })}
           >
             <item.icon className="h-5 w-5" />
             <span className={`ml-3 ${collapsed ? 'hidden' : 'block'}`}>
@@ -68,7 +75,7 @@ const AdminSidebar = () => {
         ))}
       </nav>
 
-      <div className="p-4 mt-auto">
+      <div className="p-4">
         <Button
           onClick={handleLogout}
           variant="ghost"

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Clock, MapPin, Phone, DollarSign } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
+import colors from "@/theme/colors";
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -117,15 +117,16 @@ const Orders = () => {
   };
 
   const getStatusColor = (status: string) => {
+    const statusColors = colors.orderStatus;
     switch (status) {
       case 'queued':
-        return 'bg-blue-100 text-blue-800';
+        return `bg-[${statusColors.queued.bg}] text-[${statusColors.queued.text}]`;
       case 'processing':
-        return 'bg-yellow-100 text-yellow-800';
+        return `bg-[${statusColors.processing.bg}] text-[${statusColors.processing.text}]`;
       case 'delivered':
-        return 'bg-green-100 text-green-800';
+        return `bg-[${statusColors.delivered.bg}] text-[${statusColors.delivered.text}]`;
       case 'canceled':
-        return 'bg-red-100 text-red-800';
+        return `bg-[${statusColors.canceled.bg}] text-[${statusColors.canceled.text}]`;
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -140,7 +141,7 @@ const Orders = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
       
       <main className="flex-1 p-6">
@@ -151,7 +152,7 @@ const Orders = () => {
 
         <div className="space-y-6">
           {orders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg transition-shadow">
+            <Card key={order.id} className="hover:shadow-lg transition-shadow" style={{ backgroundColor: colors.backgrounds.card }}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>

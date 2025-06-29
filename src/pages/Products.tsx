@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Edit, Trash2, X } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
+import colors from "@/theme/colors";
 
 interface ProductVariant {
   name: string;
@@ -103,14 +104,32 @@ const Products = () => {
     }
   }, [navigate]);
 
+  // Helper function to get the lowest price for display
+  const getLowestPrice = (product: Product) => {
+    if (product.variants && product.variants.length > 0) {
+      const lowestVariantPrice = Math.min(...product.variants.map(v => v.offerPrice));
+      return lowestVariantPrice;
+    }
+    return product.offerPrice;
+  };
+
+  // Helper function to check if product has variants or addons
+  const hasVariantsOrAddons = variants.length > 0 || addons.length > 0;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation: If no variants, require base pricing
+    if (variants.length === 0 && (!formData.price || !formData.offerPrice)) {
+      toast.error("Regular Price and Offer Price are required when no variants are specified");
+      return;
+    }
     
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Date.now(),
       ...formData,
-      price: parseFloat(formData.price),
-      offerPrice: parseFloat(formData.offerPrice),
+      price: variants.length > 0 ? 0 : parseFloat(formData.price), // Set to 0 if variants exist
+      offerPrice: variants.length > 0 ? 0 : parseFloat(formData.offerPrice), // Set to 0 if variants exist
       variants,
       addons
     };
@@ -194,10 +213,8 @@ const Products = () => {
     setAddons(addons.filter((_, i) => i !== index));
   };
 
-  const hasVariantsOrAddons = variants.length > 0 || addons.length > 0;
-
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
       
       <main className="flex-1 p-6">
@@ -209,7 +226,7 @@ const Products = () => {
           
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600" onClick={resetForm}>
+              <Button style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90" onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -252,37 +269,48 @@ const Products = () => {
                   </div>
                 </div>
 
-                {!hasVariantsOrAddons && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price">Regular Price (PKR)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        value={formData.price}
-                        onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        required
-                      />
+                {/* Base Pricing - Only show when no variants exist */}
+                {variants.length === 0 && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-800 mb-2">Base Pricing</h4>
+                      <p className="text-sm text-blue-700">
+                        Since no variants are added, base pricing is required. This will be the price displayed for this product.
+                      </p>
                     </div>
                     
-                    <div>
-                      <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
-                      <Input
-                        id="offerPrice"
-                        type="number"
-                        value={formData.offerPrice}
-                        onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="price">Regular Price (PKR)</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: e.target.value})}
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
+                        <Input
+                          id="offerPrice"
+                          type="number"
+                          value={formData.offerPrice}
+                          onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {hasVariantsOrAddons && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-700 font-medium">
-                      💡 Since you have variants or add-ons, pricing will be managed through those options. 
-                      The base price fields above will be used as fallback values.
+                {/* Pricing Note when variants exist */}
+                {variants.length > 0 && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 mb-2">💡 Variant-Based Pricing Active</h4>
+                    <p className="text-sm text-amber-700">
+                      Since you have variants, pricing will be managed through those options. The lowest variant price will be displayed as "From PKR X" on product cards.
                     </p>
                   </div>
                 )}
@@ -310,8 +338,10 @@ const Products = () => {
 
                 {/* Variants Section */}
                 <div className="space-y-4">
-                  <Label className="text-lg font-semibold">Product Variants</Label>
-                  <p className="text-sm text-gray-600">Add different sizes or variations with their specific pricing</p>
+                  <div>
+                    <Label className="text-lg font-semibold">Product Variants</Label>
+                    <p className="text-sm text-gray-600">Add different sizes or variations with their specific pricing</p>
+                  </div>
                   
                   <div className="grid grid-cols-4 gap-2 items-end">
                     <div>
@@ -356,8 +386,10 @@ const Products = () => {
 
                 {/* Add-ons Section */}
                 <div className="space-y-4">
-                  <Label className="text-lg font-semibold">Product Add-ons</Label>
-                  <p className="text-sm text-gray-600">Add optional extras customers can choose</p>
+                  <div>
+                    <Label className="text-lg font-semibold">Product Add-ons</Label>
+                    <p className="text-sm text-gray-600">Add optional extras customers can choose</p>
+                  </div>
                   
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
@@ -396,7 +428,7 @@ const Products = () => {
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
+                  <Button type="submit" style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90">
                     {editingProduct ? "Update" : "Add"} Product
                   </Button>
                 </div>
@@ -407,7 +439,7 @@ const Products = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" style={{ backgroundColor: colors.backgrounds.card }}>
               <div className="relative">
                 <img
                   src={product.image}
@@ -430,11 +462,21 @@ const Products = () => {
                 
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <span className="text-lg font-bold text-orange-500">PKR {product.offerPrice}</span>
-                    {product.price !== product.offerPrice && (
-                      <span className="text-sm text-gray-500 line-through ml-2">
-                        PKR {product.price}
+                    {product.variants && product.variants.length > 0 ? (
+                      <span className="text-lg font-bold" style={{ color: colors.primary[500] }}>
+                        From PKR {getLowestPrice(product)}
                       </span>
+                    ) : (
+                      <>
+                        <span className="text-lg font-bold" style={{ color: colors.primary[500] }}>
+                          PKR {product.offerPrice}
+                        </span>
+                        {product.price !== product.offerPrice && (
+                          <span className="text-sm text-gray-500 line-through ml-2">
+                            PKR {product.price}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
