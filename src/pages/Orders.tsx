@@ -15,35 +15,35 @@ const Orders = () => {
     {
       id: "#12345",
       customer: "John Doe",
-      phone: "+1234567890",
-      address: "123 Main St, City",
+      phone: "+923001234567",
+      address: "123 Main St, Karachi",
       items: ["Chicken Burger x2", "Fries x1", "Coke x2"],
-      total: 34.50,
-      status: "processing",
+      total: 3450,
+      status: "queued",
       orderTime: "2 mins ago",
       estimatedDelivery: "25-30 mins"
     },
     {
       id: "#12346",
       customer: "Jane Smith",
-      phone: "+1234567891",
-      address: "456 Oak Ave, City",
+      phone: "+923001234568",
+      address: "456 Oak Ave, Lahore",
       items: ["Margherita Pizza x1", "Garlic Bread x1"],
-      total: 28.99,
-      status: "delivered",
-      orderTime: "1 hour ago",
-      estimatedDelivery: "Delivered"
+      total: 2899,
+      status: "processing",
+      orderTime: "15 mins ago",
+      estimatedDelivery: "20-25 mins"
     },
     {
       id: "#12347",
       customer: "Mike Johnson",
-      phone: "+1234567892",
-      address: "789 Pine St, City",
+      phone: "+923001234569",
+      address: "789 Pine St, Islamabad",
       items: ["Fried Chicken x3", "Coleslaw x2"],
-      total: 45.75,
-      status: "canceled",
-      orderTime: "3 hours ago",
-      estimatedDelivery: "Canceled"
+      total: 4575,
+      status: "delivered",
+      orderTime: "1 hour ago",
+      estimatedDelivery: "Delivered"
     }
   ]);
 
@@ -63,6 +63,8 @@ const Orders = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'queued':
+        return 'bg-blue-100 text-blue-800';
       case 'processing':
         return 'bg-yellow-100 text-yellow-800';
       case 'delivered':
@@ -72,11 +74,6 @@ const Orders = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const getStatusOptions = (currentStatus: string) => {
-    const allStatuses = ['processing', 'delivered', 'canceled'];
-    return allStatuses.filter(status => status !== currentStatus);
   };
 
   return (
@@ -108,7 +105,7 @@ const Orders = () => {
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </Badge>
                     <div className="text-2xl font-bold text-gray-800">
-                      ${order.total.toFixed(2)}
+                      PKR {order.total}
                     </div>
                   </div>
                 </div>
@@ -159,6 +156,7 @@ const Orders = () => {
                           <SelectValue placeholder="Change status" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="queued">Queued</SelectItem>
                           <SelectItem value="processing">Processing</SelectItem>
                           <SelectItem value="delivered">Delivered</SelectItem>
                           <SelectItem value="canceled">Canceled</SelectItem>

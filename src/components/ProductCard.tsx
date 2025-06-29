@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Plus } from "lucide-react";
 
+interface ProductVariant {
+  name: string;
+  price: number;
+  offerPrice: number;
+}
+
+interface ProductAddon {
+  name: string;
+  price: number;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -12,6 +23,8 @@ interface Product {
   image: string;
   rating: number;
   category: string;
+  variants?: ProductVariant[];
+  addons?: ProductAddon[];
 }
 
 interface ProductCardProps {
@@ -50,15 +63,46 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <span className="text-xl font-bold text-orange-500">
-              ${product.offerPrice}
+              PKR {product.offerPrice}
             </span>
             {product.price !== product.offerPrice && (
               <span className="text-sm text-gray-500 line-through">
-                ${product.price}
+                PKR {product.price}
               </span>
             )}
           </div>
         </div>
+
+        {product.variants && product.variants.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-gray-600 mb-1">Variants:</p>
+            <div className="flex flex-wrap gap-1">
+              {product.variants.map((variant, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {variant.name} - PKR {variant.offerPrice}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {product.addons && product.addons.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-gray-600 mb-1">Add-ons available:</p>
+            <div className="flex flex-wrap gap-1">
+              {product.addons.slice(0, 2).map((addon, index) => (
+                <Badge key={index} variant="outline" className="text-xs bg-green-50">
+                  +{addon.name} (+PKR {addon.price})
+                </Badge>
+              ))}
+              {product.addons.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{product.addons.length - 2} more
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
         
         <Button className="w-full bg-orange-500 hover:bg-orange-600 transform hover:scale-105 transition-all">
           <Plus className="h-4 w-4 mr-2" />

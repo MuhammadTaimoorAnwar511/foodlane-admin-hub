@@ -9,40 +9,80 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Image } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
 
+interface ProductVariant {
+  name: string;
+  price: number;
+  offerPrice: number;
+}
+
+interface ProductAddon {
+  name: string;
+  price: number;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  offerPrice: number;
+  category: string;
+  availability: boolean;
+  description: string;
+  variants: ProductVariant[];
+  addons: ProductAddon[];
+  image: string;
+}
+
 const Products = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([
+  const [products, setProducts] = useState<Product[]>([
     {
       id: 1,
       name: "Chicken Burger",
-      price: 12.99,
-      offerPrice: 9.99,
+      price: 1299,
+      offerPrice: 999,
       category: "Burgers",
       availability: true,
       description: "Juicy chicken burger with fresh lettuce and tomatoes",
-      variants: ["Regular", "Large"],
+      variants: [
+        { name: "Regular", price: 1299, offerPrice: 999 },
+        { name: "Large", price: 1599, offerPrice: 1299 }
+      ],
+      addons: [
+        { name: "Extra Cheese", price: 150 },
+        { name: "Extra Patty", price: 300 }
+      ],
       image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop"
     },
     {
       id: 2,
       name: "Margherita Pizza",
-      price: 15.99,
-      offerPrice: 12.99,
+      price: 1599,
+      offerPrice: 1299,
       category: "Pizza",
       availability: true,
       description: "Classic pizza with fresh mozzarella and basil",
-      variants: ["Small", "Medium", "Large"],
+      variants: [
+        { name: "Small", price: 1299, offerPrice: 999 },
+        { name: "Medium", price: 1599, offerPrice: 1299 },
+        { name: "Large", price: 1999, offerPrice: 1599 }
+      ],
+      addons: [
+        { name: "Extra Cheese", price: 200 },
+        { name: "Olives", price: 150 },
+        { name: "Mushrooms", price: 180 }
+      ],
       image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop"
     }
   ]);
 
   const [categories] = useState(["Burgers", "Pizza", "Chicken", "Beverages", "Desserts"]);
   const [showDialog, setShowDialog] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -50,9 +90,12 @@ const Products = () => {
     category: "",
     availability: true,
     description: "",
-    variants: "",
     image: ""
   });
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [addons, setAddons] = useState<ProductAddon[]>([]);
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", offerPrice: "" });
+  const [newAddon, setNewAddon] = useState({ name: "", price: "" });
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("adminLoggedIn");
@@ -64,12 +107,13 @@ const Products = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newProduct = {
+    const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Date.now(),
       ...formData,
       price: parseFloat(formData.price),
       offerPrice: parseFloat(formData.offerPrice),
-      variants: formData.variants.split(",").map(v => v.trim())
+      variants,
+      addons
     };
 
     if (editingProduct) {
@@ -92,26 +136,63 @@ const Products = () => {
       category: "",
       availability: true,
       description: "",
-      variants: "",
       image: ""
     });
+    setVariants([]);
+    setAddons([]);
+    setNewVariant({ name: "", price: "", offerPrice: "" });
+    setNewAddon({ name: "", price: "" });
     setEditingProduct(null);
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setFormData({
-      ...product,
+      name: product.name,
       price: product.price.toString(),
       offerPrice: product.offerPrice.toString(),
-      variants: product.variants.join(", ")
+      category: product.category,
+      availability: product.availability,
+      description: product.description,
+      image: product.image
     });
+    setVariants(product.variants);
+    setAddons(product.addons);
     setShowDialog(true);
   };
 
   const handleDelete = (id: number) => {
     setProducts(products.filter(p => p.id !== id));
     toast.success("Product deleted successfully!");
+  };
+
+  const addVariant = () => {
+    if (newVariant.name && newVariant.price && newVariant.offerPrice) {
+      setVariants([...variants, {
+        name: newVariant.name,
+        price: parseFloat(newVariant.price),
+        offerPrice: parseFloat(newVariant.offerPrice)
+      }]);
+      setNewVariant({ name: "", price: "", offerPrice: "" });
+    }
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const addAddon = () => {
+    if (newAddon.name && newAddon.price) {
+      setAddons([...addons, {
+        name: newAddon.name,
+        price: parseFloat(newAddon.price)
+      }]);
+      setNewAddon({ name: "", price: "" });
+    }
+  };
+
+  const removeAddon = (index: number) => {
+    setAddons(addons.filter((_, i) => i !== index));
   };
 
   return (
@@ -133,14 +214,14 @@ const Products = () => {
               </Button>
             </DialogTrigger>
             
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? "Edit Product" : "Add New Product"}
                 </DialogTitle>
               </DialogHeader>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Product Name</Label>
@@ -172,11 +253,10 @@ const Products = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="price">Regular Price ($)</Label>
+                    <Label htmlFor="price">Regular Price (PKR)</Label>
                     <Input
                       id="price"
                       type="number"
-                      step="0.01"
                       value={formData.price}
                       onChange={(e) => setFormData({...formData, price: e.target.value})}
                       required
@@ -184,11 +264,10 @@ const Products = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="offerPrice">Offer Price ($)</Label>
+                    <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
                     <Input
                       id="offerPrice"
                       type="number"
-                      step="0.01"
                       value={formData.offerPrice}
                       onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
                       required
@@ -207,16 +286,6 @@ const Products = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="variants">Variants (comma separated)</Label>
-                  <Input
-                    id="variants"
-                    placeholder="Regular, Large, Extra Large"
-                    value={formData.variants}
-                    onChange={(e) => setFormData({...formData, variants: e.target.value})}
-                  />
-                </div>
-
-                <div>
                   <Label htmlFor="image">Image URL</Label>
                   <Input
                     id="image"
@@ -225,6 +294,88 @@ const Products = () => {
                     value={formData.image}
                     onChange={(e) => setFormData({...formData, image: e.target.value})}
                   />
+                </div>
+
+                {/* Variants Section */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">Product Variants</Label>
+                  
+                  <div className="grid grid-cols-4 gap-2 items-end">
+                    <div>
+                      <Label>Variant Name</Label>
+                      <Input
+                        placeholder="e.g., Small, Large"
+                        value={newVariant.name}
+                        onChange={(e) => setNewVariant({...newVariant, name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Price (PKR)</Label>
+                      <Input
+                        type="number"
+                        value={newVariant.price}
+                        onChange={(e) => setNewVariant({...newVariant, price: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Offer Price (PKR)</Label>
+                      <Input
+                        type="number"
+                        value={newVariant.offerPrice}
+                        onChange={(e) => setNewVariant({...newVariant, offerPrice: e.target.value})}
+                      />
+                    </div>
+                    <Button type="button" onClick={addVariant}>Add</Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {variants.map((variant, index) => (
+                      <Badge key={index} variant="outline" className="flex items-center gap-2">
+                        {variant.name} - PKR {variant.offerPrice}
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => removeVariant(index)}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add-ons Section */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">Product Add-ons</Label>
+                  
+                  <div className="grid grid-cols-3 gap-2 items-end">
+                    <div>
+                      <Label>Add-on Name</Label>
+                      <Input
+                        placeholder="e.g., Extra Cheese"
+                        value={newAddon.name}
+                        onChange={(e) => setNewAddon({...newAddon, name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Price (PKR)</Label>
+                      <Input
+                        type="number"
+                        value={newAddon.price}
+                        onChange={(e) => setNewAddon({...newAddon, price: e.target.value})}
+                      />
+                    </div>
+                    <Button type="button" onClick={addAddon}>Add</Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {addons.map((addon, index) => (
+                      <Badge key={index} variant="outline" className="flex items-center gap-2 bg-green-50">
+                        {addon.name} (+PKR {addon.price})
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => removeAddon(index)}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2">
@@ -265,25 +416,45 @@ const Products = () => {
                 
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <span className="text-lg font-bold text-orange-500">${product.offerPrice}</span>
+                    <span className="text-lg font-bold text-orange-500">PKR {product.offerPrice}</span>
                     {product.price !== product.offerPrice && (
                       <span className="text-sm text-gray-500 line-through ml-2">
-                        ${product.price}
+                        PKR {product.price}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="mb-3">
-                  <p className="text-xs text-gray-600 mb-1">Variants:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {product.variants.map((variant, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {variant}
-                      </Badge>
-                    ))}
+                {product.variants.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-600 mb-1">Variants:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {product.variants.map((variant, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {variant.name} - PKR {variant.offerPrice}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {product.addons.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-600 mb-1">Add-ons:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {product.addons.slice(0, 2).map((addon, index) => (
+                        <Badge key={index} variant="outline" className="text-xs bg-green-50">
+                          +{addon.name} (+PKR {addon.price})
+                        </Badge>
+                      ))}
+                      {product.addons.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{product.addons.length - 2} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex space-x-2">
                   <Button
