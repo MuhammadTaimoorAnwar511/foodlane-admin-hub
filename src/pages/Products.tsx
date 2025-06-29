@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, X } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
@@ -119,6 +120,27 @@ const Products = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Enhanced validation for required fields
+    if (!formData.name.trim()) {
+      toast.error("Product name is required");
+      return;
+    }
+    
+    if (!formData.category) {
+      toast.error("Category is required");
+      return;
+    }
+    
+    if (!formData.description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+    
+    if (!formData.image.trim()) {
+      toast.error("Image URL is required");
+      return;
+    }
+    
     // Validation: If no variants, require base pricing
     if (variants.length === 0 && (!formData.price || !formData.offerPrice)) {
       toast.error("Regular Price and Offer Price are required when no variants are specified");
@@ -128,8 +150,8 @@ const Products = () => {
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Date.now(),
       ...formData,
-      price: variants.length > 0 ? 0 : parseFloat(formData.price), // Set to 0 if variants exist
-      offerPrice: variants.length > 0 ? 0 : parseFloat(formData.offerPrice), // Set to 0 if variants exist
+      price: variants.length > 0 ? 0 : parseFloat(formData.price),
+      offerPrice: variants.length > 0 ? 0 : parseFloat(formData.offerPrice),
       variants,
       addons
     };
@@ -182,6 +204,14 @@ const Products = () => {
   const handleDelete = (id: number) => {
     setProducts(products.filter(p => p.id !== id));
     toast.success("Product deleted successfully!");
+  };
+
+  const toggleAvailability = (id: number) => {
+    setProducts(products.map(p => 
+      p.id === id ? { ...p, availability: !p.availability } : p
+    ));
+    const product = products.find(p => p.id === id);
+    toast.success(`${product?.name} marked as ${!product?.availability ? 'Available' : 'Out of Stock'}`);
   };
 
   const addVariant = () => {
@@ -242,7 +272,7 @@ const Products = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Product Name</Label>
+                    <Label htmlFor="name">Product Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -252,10 +282,11 @@ const Products = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="category">Category *</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(value) => setFormData({...formData, category: value})}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -267,6 +298,18 @@ const Products = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                {/* Availability Toggle */}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="availability"
+                    checked={formData.availability}
+                    onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
+                  />
+                  <Label htmlFor="availability">
+                    Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
+                  </Label>
                 </div>
 
                 {/* Base Pricing - Only show when no variants exist */}
@@ -281,24 +324,24 @@ const Products = () => {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="price">Regular Price (PKR)</Label>
+                        <Label htmlFor="price">Regular Price (PKR) *</Label>
                         <Input
                           id="price"
                           type="number"
                           value={formData.price}
                           onChange={(e) => setFormData({...formData, price: e.target.value})}
-                          required
+                          required={variants.length === 0}
                         />
                       </div>
                       
                       <div>
-                        <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
+                        <Label htmlFor="offerPrice">Offer Price (PKR) *</Label>
                         <Input
                           id="offerPrice"
                           type="number"
                           value={formData.offerPrice}
                           onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
-                          required
+                          required={variants.length === 0}
                         />
                       </div>
                     </div>
@@ -316,23 +359,25 @@ const Products = () => {
                 )}
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">Description *</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows={3}
+                    required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="image">Image URL</Label>
+                  <Label htmlFor="image">Image URL *</Label>
                   <Input
                     id="image"
                     type="url"
                     placeholder="https://example.com/image.jpg"
                     value={formData.image}
                     onChange={(e) => setFormData({...formData, image: e.target.value})}
+                    required
                   />
                 </div>
 
@@ -512,6 +557,18 @@ const Products = () => {
                   </div>
                 )}
                 
+                <div className="flex space-x-2 mb-2">
+                  <Button
+                    size="sm"
+                    variant={product.availability ? "outline" : "default"}
+                    onClick={() => toggleAvailability(product.id)}
+                    className="flex-1"
+                    style={!product.availability ? { backgroundColor: colors.status.success } : {}}
+                  >
+                    {product.availability ? 'Mark Out of Stock' : 'Mark Available'}
+                  </Button>
+                </div>
+
                 <div className="flex space-x-2">
                   <Button
                     size="sm"

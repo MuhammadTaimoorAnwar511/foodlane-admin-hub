@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,21 @@ import colors from "@/theme/colors";
 
 const Orders = () => {
   const navigate = useNavigate();
+  
+  // Get delivery settings from localStorage
+  const getDeliverySettings = () => {
+    const saved = localStorage.getItem("deliverySettings");
+    return saved ? JSON.parse(saved) : { minDeliveryTime: 25, maxDeliveryTime: 30, deliveryCharges: 150 };
+  };
+
+  const [deliverySettings] = useState(getDeliverySettings());
+  
   const [orders, setOrders] = useState([
     {
       id: "#12345",
       customer: "John Doe",
       phone: "+923001234567",
-      address: "123 Main St, Karachi",
+      address: "123 Main St, Karachi", 
       items: [
         { 
           name: "Chicken Burger", 
@@ -40,10 +50,12 @@ const Orders = () => {
           addons: []
         }
       ],
-      total: 3450,
+      subtotal: 3300,
+      deliveryCharges: deliverySettings.deliveryCharges,
+      total: 3300 + deliverySettings.deliveryCharges,
       status: "queued",
       orderTime: "2 mins ago",
-      estimatedDelivery: "25-30 mins"
+      estimatedDelivery: `${deliverySettings.minDeliveryTime}-${deliverySettings.maxDeliveryTime} mins`
     },
     {
       id: "#12346",
@@ -69,10 +81,12 @@ const Orders = () => {
           addons: []
         }
       ],
-      total: 2899,
+      subtotal: 2750,
+      deliveryCharges: deliverySettings.deliveryCharges,
+      total: 2750 + deliverySettings.deliveryCharges,
       status: "processing",
       orderTime: "15 mins ago",
-      estimatedDelivery: "20-25 mins"
+      estimatedDelivery: `${Math.max(deliverySettings.minDeliveryTime - 10, 5)}-${Math.max(deliverySettings.maxDeliveryTime - 10, 15)} mins`
     },
     {
       id: "#12347",
@@ -95,7 +109,9 @@ const Orders = () => {
           addons: []
         }
       ],
-      total: 4575,
+      subtotal: 4425,
+      deliveryCharges: deliverySettings.deliveryCharges,
+      total: 4425 + deliverySettings.deliveryCharges,
       status: "delivered",
       orderTime: "1 hour ago",
       estimatedDelivery: "Delivered"
@@ -198,7 +214,7 @@ const Orders = () => {
                     <h4 className="font-semibold text-gray-800 mb-3">Order Items</h4>
                     <div className="space-y-3">
                       {order.items.map((item, index) => (
-                        <div key={index} className="border-l-2 border-orange-200 pl-3">
+                        <div key={index} className="border-l-2 pl-3" style={{ borderColor: colors.primary[200] }}>
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <p className="font-medium text-gray-800">
@@ -228,6 +244,22 @@ const Orders = () => {
                           </div>
                         </div>
                       ))}
+                      
+                      {/* Order Summary */}
+                      <div className="border-t pt-3 mt-3">
+                        <div className="flex justify-between text-sm">
+                          <span>Subtotal:</span>
+                          <span>PKR {order.subtotal}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Delivery Charges:</span>
+                          <span>PKR {order.deliveryCharges}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-base border-t pt-1">
+                          <span>Total:</span>
+                          <span style={{ color: colors.primary[500] }}>PKR {order.total}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
