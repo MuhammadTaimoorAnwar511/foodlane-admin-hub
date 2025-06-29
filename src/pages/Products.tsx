@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -195,6 +194,8 @@ const Products = () => {
     setAddons(addons.filter((_, i) => i !== index));
   };
 
+  const hasVariantsOrAddons = variants.length > 0 || addons.length > 0;
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AdminSidebar />
@@ -251,29 +252,40 @@ const Products = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="price">Regular Price (PKR)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
-                      required
-                    />
+                {!hasVariantsOrAddons && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price">Regular Price (PKR)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({...formData, price: e.target.value})}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
+                      <Input
+                        id="offerPrice"
+                        type="number"
+                        value={formData.offerPrice}
+                        onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
+                        required
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="offerPrice">Offer Price (PKR)</Label>
-                    <Input
-                      id="offerPrice"
-                      type="number"
-                      value={formData.offerPrice}
-                      onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
-                      required
-                    />
+                )}
+
+                {hasVariantsOrAddons && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700 font-medium">
+                      💡 Since you have variants or add-ons, pricing will be managed through those options. 
+                      The base price fields above will be used as fallback values.
+                    </p>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <Label htmlFor="description">Description</Label>
@@ -299,6 +311,7 @@ const Products = () => {
                 {/* Variants Section */}
                 <div className="space-y-4">
                   <Label className="text-lg font-semibold">Product Variants</Label>
+                  <p className="text-sm text-gray-600">Add different sizes or variations with their specific pricing</p>
                   
                   <div className="grid grid-cols-4 gap-2 items-end">
                     <div>
@@ -310,7 +323,7 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      <Label>Price (PKR)</Label>
+                      <Label>Regular Price (PKR)</Label>
                       <Input
                         type="number"
                         value={newVariant.price}
@@ -344,6 +357,7 @@ const Products = () => {
                 {/* Add-ons Section */}
                 <div className="space-y-4">
                   <Label className="text-lg font-semibold">Product Add-ons</Label>
+                  <p className="text-sm text-gray-600">Add optional extras customers can choose</p>
                   
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
@@ -355,7 +369,7 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      <Label>Price (PKR)</Label>
+                      <Label>Additional Price (PKR)</Label>
                       <Input
                         type="number"
                         value={newAddon.price}

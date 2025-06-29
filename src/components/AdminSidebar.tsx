@@ -32,7 +32,7 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className={`bg-gray-800 text-white h-screen transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+    <div className={`bg-gray-800 text-white h-screen flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4">
         <div className="flex items-center justify-between">
           <h2 className={`font-bold text-xl ${collapsed ? 'hidden' : 'block'}`}>
@@ -49,7 +49,7 @@ const AdminSidebar = () => {
         </div>
       </div>
 
-      <nav className="mt-8">
+      <nav className="mt-8 flex-1">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
@@ -68,7 +68,7 @@ const AdminSidebar = () => {
         ))}
       </nav>
 
-      <div className="absolute bottom-4 left-4 right-4">
+      <div className="p-4 mt-auto">
         <Button
           onClick={handleLogout}
           variant="ghost"

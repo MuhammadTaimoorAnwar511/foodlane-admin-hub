@@ -17,7 +17,29 @@ const Orders = () => {
       customer: "John Doe",
       phone: "+923001234567",
       address: "123 Main St, Karachi",
-      items: ["Chicken Burger x2", "Fries x1", "Coke x2"],
+      items: [
+        { 
+          name: "Chicken Burger", 
+          quantity: 2, 
+          basePrice: 999,
+          variant: { name: "Large", price: 1299 },
+          addons: [{ name: "Extra Cheese", price: 150 }]
+        },
+        { 
+          name: "Fries", 
+          quantity: 1, 
+          basePrice: 299,
+          variant: null,
+          addons: []
+        },
+        { 
+          name: "Coke", 
+          quantity: 2, 
+          basePrice: 199,
+          variant: { name: "Large", price: 299 },
+          addons: []
+        }
+      ],
       total: 3450,
       status: "queued",
       orderTime: "2 mins ago",
@@ -28,7 +50,25 @@ const Orders = () => {
       customer: "Jane Smith",
       phone: "+923001234568",
       address: "456 Oak Ave, Lahore",
-      items: ["Margherita Pizza x1", "Garlic Bread x1"],
+      items: [
+        { 
+          name: "Margherita Pizza", 
+          quantity: 1, 
+          basePrice: 1299,
+          variant: { name: "Medium", price: 1599 },
+          addons: [
+            { name: "Extra Cheese", price: 200 },
+            { name: "Olives", price: 150 }
+          ]
+        },
+        { 
+          name: "Garlic Bread", 
+          quantity: 1, 
+          basePrice: 449,
+          variant: null,
+          addons: []
+        }
+      ],
       total: 2899,
       status: "processing",
       orderTime: "15 mins ago",
@@ -39,7 +79,22 @@ const Orders = () => {
       customer: "Mike Johnson",
       phone: "+923001234569",
       address: "789 Pine St, Islamabad",
-      items: ["Fried Chicken x3", "Coleslaw x2"],
+      items: [
+        { 
+          name: "Fried Chicken", 
+          quantity: 3, 
+          basePrice: 899,
+          variant: { name: "Spicy", price: 999 },
+          addons: [{ name: "Extra Sauce", price: 75 }]
+        },
+        { 
+          name: "Coleslaw", 
+          quantity: 2, 
+          basePrice: 199,
+          variant: null,
+          addons: []
+        }
+      ],
       total: 4575,
       status: "delivered",
       orderTime: "1 hour ago",
@@ -74,6 +129,14 @@ const Orders = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getItemPrice = (item: any) => {
+    let price = item.variant ? item.variant.price : item.basePrice;
+    if (item.addons && item.addons.length > 0) {
+      price += item.addons.reduce((sum: number, addon: any) => sum + addon.price, 0);
+    }
+    return price;
   };
 
   return (
@@ -132,11 +195,37 @@ const Orders = () => {
                   {/* Order Items */}
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3">Order Items</h4>
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                       {order.items.map((item, index) => (
-                        <p key={index} className="text-sm text-gray-600">
-                          • {item}
-                        </p>
+                        <div key={index} className="border-l-2 border-orange-200 pl-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-800">
+                                {item.name} x{item.quantity}
+                              </p>
+                              {item.variant && (
+                                <p className="text-xs text-blue-600">
+                                  • Variant: {item.variant.name}
+                                </p>
+                              )}
+                              {item.addons && item.addons.length > 0 && (
+                                <div className="text-xs text-green-600">
+                                  {item.addons.map((addon: any, addonIndex: number) => (
+                                    <p key={addonIndex}>• {addon.name}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-gray-800">
+                                PKR {getItemPrice(item) * item.quantity}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                PKR {getItemPrice(item)} each
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
