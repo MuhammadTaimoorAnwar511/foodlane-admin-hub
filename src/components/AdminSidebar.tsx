@@ -1,4 +1,3 @@
-
 import { 
   LayoutDashboard, 
   Package, 
@@ -6,6 +5,7 @@ import {
   ShoppingBag, 
   Users, 
   Clock,
+  Store,
   LogOut,
   Menu
 } from "lucide-react";
@@ -27,6 +27,7 @@ const AdminSidebar = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+    { icon: Store, label: "Shop Profile", path: "/admin/shop-profile" },
     { icon: Package, label: "Products", path: "/admin/products" },
     { icon: FolderOpen, label: "Categories", path: "/admin/categories" },
     { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
