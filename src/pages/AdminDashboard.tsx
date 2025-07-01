@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingBag, Users, Settings } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import DeliverySettings from "@/components/DeliverySettings";
+import ShopSchedule from "@/components/ShopSchedule";
 import colors from "@/theme/colors";
 
 const AdminDashboard = () => {
@@ -50,7 +51,7 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <DeliverySettings />
           
           <Card style={{ backgroundColor: colors.backgrounds.card }}>
@@ -63,9 +64,14 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-600">• Track orders and deliveries</p>
                 <p className="text-sm text-gray-600">• Monitor rider performance</p>
                 <p className="text-sm text-gray-600">• Update delivery settings</p>
+                <p className="text-sm text-gray-600">• Configure shop schedules</p>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-6">
+          <ShopSchedule />
         </div>
       </main>
     </div>
