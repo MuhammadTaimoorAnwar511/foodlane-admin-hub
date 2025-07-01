@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { toast } from "sonner";
 import { Clock, Plus, AlertTriangle } from "lucide-react";
 import DaySchedule from "./DaySchedule";
 import GlobalShopStatus from "./GlobalShopStatus";
+import ScheduleOverview from "./ScheduleOverview";
 import colors from "@/theme/colors";
 
 interface TimeBlockData {
@@ -49,6 +49,8 @@ const ShopSchedule = () => {
       closedMessage: "We're temporarily closed. Please check back later!"
     };
   });
+
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem("shopSchedules", JSON.stringify(schedules));
@@ -107,6 +109,19 @@ const ShopSchedule = () => {
     return { label: "Open", color: "bg-blue-100 text-blue-800" };
   };
 
+  const scrollToDay = (dayIndex: number) => {
+    setSelectedDay(dayIndex);
+    const element = document.getElementById(`day-schedule-${dayIndex}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight the selected day briefly
+      element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+      }, 2000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <GlobalShopStatus 
@@ -114,39 +129,33 @@ const ShopSchedule = () => {
         onStatusChange={setGlobalStatus}
       />
       
+      {/* Beautiful Schedule Overview */}
+      <ScheduleOverview 
+        schedules={schedules}
+        onEditDay={scrollToDay}
+      />
+      
       <Card style={{ backgroundColor: colors.backgrounds.card }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Weekly Schedule
+            Schedule Editor
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Weekly Summary */}
-          <div className="grid grid-cols-7 gap-2 mb-6">
-            {schedules.map((schedule, index) => {
-              const status = getDayStatus(schedule);
-              return (
-                <div key={schedule.day} className="text-center">
-                  <div className="text-sm font-medium mb-1">
-                    {schedule.day.slice(0, 3)}
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${status.color}`}>
-                    {status.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
           {/* Day Schedules */}
           <div className="space-y-4">
             {schedules.map((schedule, index) => (
-              <DaySchedule
+              <div 
                 key={schedule.day}
-                schedule={schedule}
-                onUpdate={(updates) => updateDaySchedule(index, updates)}
-              />
+                id={`day-schedule-${index}`}
+                className="transition-all duration-200"
+              >
+                <DaySchedule
+                  schedule={schedule}
+                  onUpdate={(updates) => updateDaySchedule(index, updates)}
+                />
+              </div>
             ))}
           </div>
 
