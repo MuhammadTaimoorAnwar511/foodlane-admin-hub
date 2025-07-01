@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Clock, Calendar, Edit3 } from "lucide-react";
+import { Clock, Calendar, Eye } from "lucide-react";
 import colors from "@/theme/colors";
 
 interface TimeBlockData {
@@ -195,10 +196,9 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
             <Popover key={schedule.day}>
               <PopoverTrigger asChild>
                 <div 
-                  className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor} hover:scale-[1.02]`}
+                  className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor} hover:scale-[1.02] group`}
                   onMouseEnter={() => setHoveredDay(schedule.day)}
                   onMouseLeave={() => setHoveredDay(null)}
-                  onClick={() => onEditDay(index)}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -207,9 +207,17 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
                         {status.label}
                       </Badge>
                     </div>
-                    {hoveredDay === schedule.day && (
-                      <Edit3 className="h-4 w-4 text-gray-500" />
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditDay(index);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </div>
                   
                   {renderTimelineBar(schedule)}
@@ -232,7 +240,7 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
                   </p>
                   <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
                     <Clock className="h-3 w-3" />
-                    Click to edit this day's schedule
+                    Click the eye icon to edit this day's schedule
                   </div>
                 </div>
               </PopoverContent>
@@ -249,14 +257,17 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
           return (
             <div
               key={schedule.day}
-              className={`p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor}`}
+              className={`p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor} group`}
               onClick={() => onEditDay(index)}
             >
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-sm">{schedule.day.slice(0, 3)}</h4>
-                <Badge className={`text-xs ${status.color}`}>
-                  {status.label}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-xs ${status.color}`}>
+                    {status.label}
+                  </Badge>
+                  <Eye className="h-3 w-3 text-gray-400 group-hover:text-gray-600" />
+                </div>
               </div>
               
               <div className="text-xs text-gray-600 mb-2">

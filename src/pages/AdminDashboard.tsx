@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingBag, Users, Settings } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import DeliverySettings from "@/components/DeliverySettings";
-import ShopSchedule from "@/components/ShopSchedule";
 import colors from "@/theme/colors";
 
 const AdminDashboard = () => {
@@ -68,10 +67,6 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="mb-6">
-          <ShopSchedule />
         </div>
       </main>
     </div>

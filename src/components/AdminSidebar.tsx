@@ -5,6 +5,7 @@ import {
   FolderOpen, 
   ShoppingBag, 
   Users, 
+  Clock,
   LogOut,
   Menu
 } from "lucide-react";
@@ -30,6 +31,7 @@ const AdminSidebar = () => {
     { icon: FolderOpen, label: "Categories", path: "/admin/categories" },
     { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
     { icon: Users, label: "Riders", path: "/admin/riders" },
+    { icon: Clock, label: "Schedules", path: "/admin/schedules" },
   ];
 
   return (
