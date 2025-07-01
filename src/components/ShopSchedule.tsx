@@ -10,17 +10,17 @@ import DaySchedule from "./DaySchedule";
 import GlobalShopStatus from "./GlobalShopStatus";
 import colors from "@/theme/colors";
 
-interface TimeBlock {
+interface TimeBlockData {
   id: string;
   startTime: string;
   endTime: string;
 }
 
-interface DaySchedule {
+interface DayScheduleData {
   day: string;
   isClosed: boolean;
   is24h: boolean;
-  timeBlocks: TimeBlock[];
+  timeBlocks: TimeBlockData[];
 }
 
 const DAYS = [
@@ -29,7 +29,7 @@ const DAYS = [
 ];
 
 const ShopSchedule = () => {
-  const [schedules, setSchedules] = useState<DaySchedule[]>(() => {
+  const [schedules, setSchedules] = useState<DayScheduleData[]>(() => {
     const saved = localStorage.getItem("shopSchedules");
     if (saved) {
       return JSON.parse(saved);
@@ -54,7 +54,7 @@ const ShopSchedule = () => {
     localStorage.setItem("shopSchedules", JSON.stringify(schedules));
   }, [schedules]);
 
-  const updateDaySchedule = (dayIndex: number, updates: Partial<DaySchedule>) => {
+  const updateDaySchedule = (dayIndex: number, updates: Partial<DayScheduleData>) => {
     setSchedules(prev => prev.map((schedule, index) => 
       index === dayIndex ? { ...schedule, ...updates } : schedule
     ));
@@ -101,7 +101,7 @@ const ShopSchedule = () => {
     toast.success("Shop schedule saved successfully!");
   };
 
-  const getDayStatus = (schedule: DaySchedule) => {
+  const getDayStatus = (schedule: DayScheduleData) => {
     if (schedule.isClosed) return { label: "Closed", color: "bg-red-100 text-red-800" };
     if (schedule.is24h) return { label: "24/7", color: "bg-green-100 text-green-800" };
     return { label: "Open", color: "bg-blue-100 text-blue-800" };

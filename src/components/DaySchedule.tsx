@@ -6,27 +6,27 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 import TimeBlock from "./TimeBlock";
 
-interface TimeBlock {
+interface TimeBlockData {
   id: string;
   startTime: string;
   endTime: string;
 }
 
-interface DaySchedule {
+interface DayScheduleData {
   day: string;
   isClosed: boolean;
   is24h: boolean;
-  timeBlocks: TimeBlock[];
+  timeBlocks: TimeBlockData[];
 }
 
 interface DayScheduleProps {
-  schedule: DaySchedule;
-  onUpdate: (updates: Partial<DaySchedule>) => void;
+  schedule: DayScheduleData;
+  onUpdate: (updates: Partial<DayScheduleData>) => void;
 }
 
 const DaySchedule = ({ schedule, onUpdate }: DayScheduleProps) => {
   const addTimeBlock = () => {
-    const newBlock: TimeBlock = {
+    const newBlock: TimeBlockData = {
       id: `${schedule.day}-${Date.now()}`,
       startTime: "09:00",
       endTime: "17:00"
@@ -37,7 +37,7 @@ const DaySchedule = ({ schedule, onUpdate }: DayScheduleProps) => {
     });
   };
 
-  const updateTimeBlock = (blockId: string, updates: Partial<TimeBlock>) => {
+  const updateTimeBlock = (blockId: string, updates: Partial<TimeBlockData>) => {
     onUpdate({
       timeBlocks: schedule.timeBlocks.map(block =>
         block.id === blockId ? { ...block, ...updates } : block

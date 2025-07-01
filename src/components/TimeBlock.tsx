@@ -1,17 +1,16 @@
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface TimeBlock {
+interface TimeBlockData {
   id: string;
   startTime: string;
   endTime: string;
 }
 
 interface TimeBlockProps {
-  block: TimeBlock;
-  onUpdate: (updates: Partial<TimeBlock>) => void;
+  block: TimeBlockData;
+  onUpdate: (updates: Partial<TimeBlockData>) => void;
 }
 
 const TimeBlock = ({ block, onUpdate }: TimeBlockProps) => {
