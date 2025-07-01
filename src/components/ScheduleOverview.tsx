@@ -70,8 +70,6 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
   };
 
   const renderTimelineBar = (schedule: DayScheduleData) => {
-    const status = getDayStatus(schedule);
-    
     if (schedule.isClosed) {
       return (
         <div className="h-8 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
@@ -88,9 +86,13 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
       );
     }
 
+    // Sort time blocks by start time
+    const sortedBlocks = [...schedule.timeBlocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
     return (
       <div className="relative h-8 bg-gray-100 rounded-lg overflow-hidden">
-        {schedule.timeBlocks.map((block, index) => {
+        {/* Render blue bars for working hours */}
+        {sortedBlocks.map((block, index) => {
           const startPos = getTimePosition(block.startTime);
           const endPos = getTimePosition(block.endTime);
           const width = endPos - startPos;
@@ -98,11 +100,7 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
           return (
             <div
               key={block.id}
-              className={`absolute h-full rounded ${
-                index === 0 ? 'bg-gradient-to-r from-blue-400 to-blue-500' : 
-                index === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-                'bg-gradient-to-r from-purple-400 to-purple-500'
-              } shadow-sm`}
+              className="absolute h-full bg-blue-500 shadow-sm"
               style={{
                 left: `${startPos}%`,
                 width: `${width}%`,
@@ -117,8 +115,34 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
           );
         })}
         
+        {/* Render yellow bars for breaks between shifts */}
+        {sortedBlocks.length > 1 && sortedBlocks.slice(0, -1).map((block, index) => {
+          const currentEndPos = getTimePosition(block.endTime);
+          const nextStartPos = getTimePosition(sortedBlocks[index + 1].startTime);
+          const breakWidth = nextStartPos - currentEndPos;
+          
+          // Only render break if there's a significant gap (more than 1% of the day)
+          if (breakWidth > 1) {
+            return (
+              <div
+                key={`break-${index}`}
+                className="absolute h-full bg-yellow-400 shadow-sm flex items-center justify-center"
+                style={{
+                  left: `${currentEndPos}%`,
+                  width: `${breakWidth}%`,
+                }}
+              >
+                <span className="text-xs text-yellow-900 font-medium">
+                  BREAK
+                </span>
+              </div>
+            );
+          }
+          return null;
+        })}
+        
         {/* Hour markers */}
-        <div className="absolute inset-0 flex">
+        <div className="absolute inset-0 flex pointer-events-none">
           {[0, 6, 12, 18, 24].map(hour => (
             <div
               key={hour}
@@ -141,146 +165,140 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
   };
 
   return (
-    <Card style={{ backgroundColor: colors.backgrounds.card }} className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Weekly Schedule Overview
-        </CardTitle>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
-            Open
-          </Badge>
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-            Split Shift
-          </Badge>
-          <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-            24/7
-          </Badge>
-          <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
-            <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
-            Closed
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Desktop View */}
-        <div className="hidden md:block space-y-4">
-          {schedules.map((schedule, index) => {
-            const status = getDayStatus(schedule);
-            
-            return (
-              <Popover key={schedule.day}>
-                <PopoverTrigger asChild>
-                  <div 
-                    className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor} hover:scale-[1.02]`}
-                    onMouseEnter={() => setHoveredDay(schedule.day)}
-                    onMouseLeave={() => setHoveredDay(null)}
-                    onClick={() => onEditDay(index)}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-lg">{schedule.day}</h3>
-                        <Badge className={status.color}>
-                          {status.label}
-                        </Badge>
-                      </div>
-                      {hoveredDay === schedule.day && (
-                        <Edit3 className="h-4 w-4 text-gray-500" />
-                      )}
-                    </div>
-                    
-                    {renderTimelineBar(schedule)}
-                    
-                    {/* Time markers */}
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>12 AM</span>
-                      <span>6 AM</span>
-                      <span>12 PM</span>
-                      <span>6 PM</span>
-                      <span>12 AM</span>
-                    </div>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-2">
-                    <h4 className="font-semibold">{schedule.day} Schedule</h4>
-                    <p className="text-sm text-gray-600">
-                      {getDetailedSchedule(schedule)}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
-                      <Clock className="h-3 w-3" />
-                      Click to edit this day's schedule
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            );
-          })}
-        </div>
+    <div className="space-y-6">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+          <div className="w-3 h-2 bg-blue-500 rounded-sm mr-2"></div>
+          Working Hours
+        </Badge>
+        <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+          <div className="w-3 h-2 bg-yellow-400 rounded-sm mr-2"></div>
+          Break
+        </Badge>
+        <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">
+          <div className="w-3 h-2 bg-green-500 rounded-sm mr-2"></div>
+          24/7
+        </Badge>
+        <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
+          <div className="w-3 h-2 bg-gray-300 rounded-sm mr-2 border-dashed border"></div>
+          Closed
+        </Badge>
+      </div>
 
-        {/* Mobile/Tablet View */}
-        <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {schedules.map((schedule, index) => {
-            const status = getDayStatus(schedule);
-            
-            return (
-              <div
-                key={schedule.day}
-                className={`p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor}`}
-                onClick={() => onEditDay(index)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-sm">{schedule.day.slice(0, 3)}</h4>
-                  <Badge className={`text-xs ${status.color}`}>
-                    {status.label}
-                  </Badge>
-                </div>
-                
-                <div className="text-xs text-gray-600 mb-2">
-                  {getDetailedSchedule(schedule)}
-                </div>
-                
-                <div className="h-3">
+      {/* Desktop View */}
+      <div className="hidden md:block space-y-4">
+        {schedules.map((schedule, index) => {
+          const status = getDayStatus(schedule);
+          
+          return (
+            <Popover key={schedule.day}>
+              <PopoverTrigger asChild>
+                <div 
+                  className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor} hover:scale-[1.02]`}
+                  onMouseEnter={() => setHoveredDay(schedule.day)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  onClick={() => onEditDay(index)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-lg">{schedule.day}</h3>
+                      <Badge className={status.color}>
+                        {status.label}
+                      </Badge>
+                    </div>
+                    {hoveredDay === schedule.day && (
+                      <Edit3 className="h-4 w-4 text-gray-500" />
+                    )}
+                  </div>
+                  
                   {renderTimelineBar(schedule)}
+                  
+                  {/* Time markers */}
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>12 AM</span>
+                    <span>6 AM</span>
+                    <span>12 PM</span>
+                    <span>6 PM</span>
+                    <span>12 AM</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <h4 className="font-semibold">{schedule.day} Schedule</h4>
+                  <p className="text-sm text-gray-600">
+                    {getDetailedSchedule(schedule)}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                    <Clock className="h-3 w-3" />
+                    Click to edit this day's schedule
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          );
+        })}
+      </div>
 
-        {/* Quick Stats */}
-        <div className="mt-6 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div className="text-lg font-bold text-green-600">
-              {schedules.filter(s => !s.isClosed && !s.is24h).length}
+      {/* Mobile/Tablet View */}
+      <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {schedules.map((schedule, index) => {
+          const status = getDayStatus(schedule);
+          
+          return (
+            <div
+              key={schedule.day}
+              className={`p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md ${status.bgColor}`}
+              onClick={() => onEditDay(index)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-sm">{schedule.day.slice(0, 3)}</h4>
+                <Badge className={`text-xs ${status.color}`}>
+                  {status.label}
+                </Badge>
+              </div>
+              
+              <div className="text-xs text-gray-600 mb-2">
+                {getDetailedSchedule(schedule)}
+              </div>
+              
+              <div className="h-3">
+                {renderTimelineBar(schedule)}
+              </div>
             </div>
-            <div className="text-xs text-gray-500">Regular Days</div>
+          );
+        })}
+      </div>
+
+      {/* Quick Stats */}
+      <div className="mt-6 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div>
+          <div className="text-lg font-bold text-green-600">
+            {schedules.filter(s => !s.isClosed && !s.is24h).length}
           </div>
-          <div>
-            <div className="text-lg font-bold text-blue-600">
-              {schedules.filter(s => s.is24h).length}
-            </div>
-            <div className="text-xs text-gray-500">24/7 Days</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold text-red-600">
-              {schedules.filter(s => s.isClosed).length}
-            </div>
-            <div className="text-xs text-gray-500">Closed Days</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold text-yellow-600">
-              {schedules.filter(s => s.timeBlocks.length > 1).length}
-            </div>
-            <div className="text-xs text-gray-500">Split Shifts</div>
-          </div>
+          <div className="text-xs text-gray-500">Regular Days</div>
         </div>
-      </CardContent>
-    </Card>
+        <div>
+          <div className="text-lg font-bold text-blue-600">
+            {schedules.filter(s => s.is24h).length}
+          </div>
+          <div className="text-xs text-gray-500">24/7 Days</div>
+        </div>
+        <div>
+          <div className="text-lg font-bold text-red-600">
+            {schedules.filter(s => s.isClosed).length}
+          </div>
+          <div className="text-xs text-gray-500">Closed Days</div>
+        </div>
+        <div>
+          <div className="text-lg font-bold text-yellow-600">
+            {schedules.filter(s => s.timeBlocks.length > 1).length}
+          </div>
+          <div className="text-xs text-gray-500">Split Shifts</div>
+        </div>
+      </div>
+    </div>
   );
 };
 

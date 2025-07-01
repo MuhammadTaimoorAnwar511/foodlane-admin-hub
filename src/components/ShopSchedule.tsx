@@ -1,10 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Clock, Plus, AlertTriangle } from "lucide-react";
+import { Clock, Calendar, AlertTriangle } from "lucide-react";
 import DaySchedule from "./DaySchedule";
 import GlobalShopStatus from "./GlobalShopStatus";
 import ScheduleOverview from "./ScheduleOverview";
@@ -103,12 +103,6 @@ const ShopSchedule = () => {
     toast.success("Shop schedule saved successfully!");
   };
 
-  const getDayStatus = (schedule: DayScheduleData) => {
-    if (schedule.isClosed) return { label: "Closed", color: "bg-red-100 text-red-800" };
-    if (schedule.is24h) return { label: "24/7", color: "bg-green-100 text-green-800" };
-    return { label: "Open", color: "bg-blue-100 text-blue-800" };
-  };
-
   const scrollToDay = (dayIndex: number) => {
     setSelectedDay(dayIndex);
     const element = document.getElementById(`day-schedule-${dayIndex}`);
@@ -129,60 +123,76 @@ const ShopSchedule = () => {
         onStatusChange={setGlobalStatus}
       />
       
-      {/* Beautiful Schedule Overview */}
-      <ScheduleOverview 
-        schedules={schedules}
-        onEditDay={scrollToDay}
-      />
-      
       <Card style={{ backgroundColor: colors.backgrounds.card }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Schedule Editor
+            Shop Schedule Management
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Day Schedules */}
-          <div className="space-y-4">
-            {schedules.map((schedule, index) => (
-              <div 
-                key={schedule.day}
-                id={`day-schedule-${index}`}
-                className="transition-all duration-200"
-              >
-                <DaySchedule
-                  schedule={schedule}
-                  onUpdate={(updates) => updateDaySchedule(index, updates)}
-                />
+        <CardContent>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Weekly Schedule Overview
+              </TabsTrigger>
+              <TabsTrigger value="editor" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Schedule Editor
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="mt-6">
+              <ScheduleOverview 
+                schedules={schedules}
+                onEditDay={scrollToDay}
+              />
+            </TabsContent>
+            
+            <TabsContent value="editor" className="mt-6 space-y-6">
+              {/* Day Schedules */}
+              <div className="space-y-4">
+                {schedules.map((schedule, index) => (
+                  <div 
+                    key={schedule.day}
+                    id={`day-schedule-${index}`}
+                    className="transition-all duration-200"
+                  >
+                    <DaySchedule
+                      schedule={schedule}
+                      onUpdate={(updates) => updateDaySchedule(index, updates)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* Validation Warnings */}
-          {validateSchedules().length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-yellow-800">Schedule Warnings</h4>
-                  <ul className="mt-1 text-sm text-yellow-700 list-disc list-inside">
-                    {validateSchedules().map((warning, index) => (
-                      <li key={index}>{warning}</li>
-                    ))}
-                  </ul>
+              {/* Validation Warnings */}
+              {validateSchedules().length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-yellow-800">Schedule Warnings</h4>
+                      <ul className="mt-1 text-sm text-yellow-700 list-disc list-inside">
+                        {validateSchedules().map((warning, index) => (
+                          <li key={index}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          <Button 
-            onClick={handleSave}
-            style={{ backgroundColor: colors.primary[500] }}
-            className="w-full"
-          >
-            Save Schedule
-          </Button>
+              <Button 
+                onClick={handleSave}
+                style={{ backgroundColor: colors.primary[500] }}
+                className="w-full"
+              >
+                Save Schedule
+              </Button>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
