@@ -1,10 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Pencil, Clock } from "lucide-react";
+import { Pencil, Eye } from "lucide-react";
 import colors from "@/theme/colors";
 
 interface TimeBlockData {
@@ -26,20 +24,7 @@ interface ScheduleOverviewProps {
 }
 
 const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
-  const [is24HourFormat, setIs24HourFormat] = useState(() => {
-    const saved = localStorage.getItem("timeFormat24h");
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("timeFormat24h", JSON.stringify(is24HourFormat));
-  }, [is24HourFormat]);
-
   const formatTime = (time: string) => {
-    if (is24HourFormat) {
-      return time;
-    }
-    
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -144,18 +129,6 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-4 w-4" />
-          <Label htmlFor="time-format">24-hour format</Label>
-          <Switch
-            id="time-format"
-            checked={is24HourFormat}
-            onCheckedChange={setIs24HourFormat}
-          />
-        </div>
-      </div>
-
       <Card style={{ backgroundColor: colors.backgrounds.card }}>
         <CardHeader>
           <CardTitle>Weekly Schedule</CardTitle>
@@ -188,7 +161,7 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
                     onEditDay(index);
                   }}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </div>
             ))}

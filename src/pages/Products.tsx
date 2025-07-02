@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Edit, Trash2, X } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
@@ -36,6 +37,8 @@ interface Product {
   variants: ProductVariant[];
   addons: ProductAddon[];
   image: string;
+  stockType: 'unlimited' | 'fixed';
+  unitsInStock?: number;
 }
 
 const Products = () => {
@@ -57,7 +60,8 @@ const Products = () => {
         { name: "Extra Cheese", price: 150 },
         { name: "Extra Patty", price: 300 }
       ],
-      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop"
+      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop",
+      stockType: 'unlimited'
     },
     {
       id: 2,
@@ -77,7 +81,9 @@ const Products = () => {
         { name: "Olives", price: 150 },
         { name: "Mushrooms", price: 180 }
       ],
-      image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop"
+      image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
+      stockType: 'fixed',
+      unitsInStock: 25
     }
   ]);
 
@@ -91,7 +97,9 @@ const Products = () => {
     category: "",
     availability: true,
     description: "",
-    image: ""
+    image: "",
+    stockType: 'unlimited' as 'unlimited' | 'fixed',
+    unitsInStock: ""
   });
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [addons, setAddons] = useState<ProductAddon[]>([]);
@@ -146,14 +154,25 @@ const Products = () => {
       toast.error("Regular Price and Offer Price are required when no variants are specified");
       return;
     }
+
+    // Validation for fixed stock
+    if (formData.stockType === 'fixed' && !formData.unitsInStock) {
+      toast.error("Units in stock is required for fixed stock type");
+      return;
+    }
+
+    const unitsInStock = formData.stockType === 'fixed' ? parseInt(formData.unitsInStock) : undefined;
+    const availability = formData.stockType === 'fixed' ? (unitsInStock! > 0) : formData.availability;
     
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Date.now(),
       ...formData,
       price: variants.length > 0 ? 0 : parseFloat(formData.price),
       offerPrice: variants.length > 0 ? 0 : parseFloat(formData.offerPrice),
+      availability,
       variants,
-      addons
+      addons,
+      unitsInStock
     };
 
     if (editingProduct) {
@@ -176,7 +195,9 @@ const Products = () => {
       category: "",
       availability: true,
       description: "",
-      image: ""
+      image: "",
+      stockType: 'unlimited',
+      unitsInStock: ""
     });
     setVariants([]);
     setAddons([]);
@@ -194,7 +215,9 @@ const Products = () => {
       category: product.category,
       availability: product.availability,
       description: product.description,
-      image: product.image
+      image: product.image,
+      stockType: product.stockType,
+      unitsInStock: product.unitsInStock?.toString() || ""
     });
     setVariants(product.variants);
     setAddons(product.addons);
@@ -207,11 +230,40 @@ const Products = () => {
   };
 
   const toggleAvailability = (id: number) => {
-    setProducts(products.map(p => 
-      p.id === id ? { ...p, availability: !p.availability } : p
-    ));
+    setProducts(products.map(p => {
+      if (p.id === id) {
+        // For fixed stock, don't allow manual toggle if stock is 0
+        if (p.stockType === 'fixed' && p.unitsInStock === 0) {
+          toast.error("Cannot mark as available - no units in stock");
+          return p;
+        }
+        return { ...p, availability: !p.availability };
+      }
+      return p;
+    }));
     const product = products.find(p => p.id === id);
-    toast.success(`${product?.name} marked as ${!product?.availability ? 'Available' : 'Out of Stock'}`);
+    if (product && (product.stockType === 'unlimited' || product.unitsInStock! > 0)) {
+      toast.success(`${product?.name} marked as ${!product?.availability ? 'Available' : 'Out of Stock'}`);
+    }
+  };
+
+  const updateStock = (id: number, newStock: number) => {
+    setProducts(products.map(p => {
+      if (p.id === id && p.stockType === 'fixed') {
+        const availability = newStock > 0;
+        return { ...p, unitsInStock: newStock, availability };
+      }
+      return p;
+    }));
+    
+    const product = products.find(p => p.id === id);
+    if (product) {
+      if (newStock === 0) {
+        toast.info(`${product.name} is now out of stock`);
+      } else if (product.unitsInStock === 0 && newStock > 0) {
+        toast.success(`${product.name} is now available`);
+      }
+    }
   };
 
   const addVariant = () => {
@@ -300,16 +352,56 @@ const Products = () => {
                   </div>
                 </div>
 
-                {/* Availability Toggle */}
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="availability"
-                    checked={formData.availability}
-                    onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
-                  />
-                  <Label htmlFor="availability">
-                    Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
-                  </Label>
+                {/* Stock Management Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-lg font-semibold">Stock Management</Label>
+                    <p className="text-sm text-gray-600">Choose how to manage product availability</p>
+                  </div>
+                  
+                  <RadioGroup
+                    value={formData.stockType}
+                    onValueChange={(value: 'unlimited' | 'fixed') => setFormData({...formData, stockType: value})}
+                    className="flex flex-col space-y-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="unlimited" id="unlimited" />
+                      <Label htmlFor="unlimited">Unlimited stock - Simple Available/Out of stock toggle</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fixed" id="fixed" />
+                      <Label htmlFor="fixed">Fixed units - Track specific inventory count</Label>
+                    </div>
+                  </RadioGroup>
+
+                  {formData.stockType === 'unlimited' ? (
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="availability"
+                        checked={formData.availability}
+                        onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
+                      />
+                      <Label htmlFor="availability">
+                        Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
+                      </Label>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor="unitsInStock">Units in Stock *</Label>
+                      <Input
+                        id="unitsInStock"
+                        type="number"
+                        min="0"
+                        value={formData.unitsInStock}
+                        onChange={(e) => setFormData({...formData, unitsInStock: e.target.value})}
+                        placeholder="Enter number of units available"
+                        required={formData.stockType === 'fixed'}
+                      />
+                      <p className="text-sm text-gray-600 mt-1">
+                        Product will automatically become unavailable when stock reaches 0
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Base Pricing - Only show when no variants exist */}
@@ -505,6 +597,28 @@ const Products = () => {
                 <p className="text-sm text-gray-600 mb-2">{product.description}</p>
                 <Badge variant="secondary" className="mb-2">{product.category}</Badge>
                 
+                {/* Stock Display */}
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Stock:</span>
+                  <span className="text-sm font-medium">
+                    {product.stockType === 'unlimited' ? '∞' : `${product.unitsInStock || 0} units`}
+                  </span>
+                </div>
+
+                {/* Stock Management for Fixed Stock */}
+                {product.stockType === 'fixed' && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={product.unitsInStock || 0}
+                      onChange={(e) => updateStock(product.id, parseInt(e.target.value) || 0)}
+                      className="w-20 h-8 text-sm"
+                    />
+                    <Label className="text-xs text-gray-500">units</Label>
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     {product.variants && product.variants.length > 0 ? (
@@ -564,6 +678,7 @@ const Products = () => {
                     onClick={() => toggleAvailability(product.id)}
                     className="flex-1"
                     style={!product.availability ? { backgroundColor: colors.status.success } : {}}
+                    disabled={product.stockType === 'fixed' && product.unitsInStock === 0 && !product.availability}
                   >
                     {product.availability ? 'Mark Out of Stock' : 'Mark Available'}
                   </Button>
