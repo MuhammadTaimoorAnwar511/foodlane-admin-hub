@@ -39,24 +39,24 @@ const AdminDashboard = () => {
     <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
       
-      <main className="flex-1 p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's your restaurant overview.</p>
+      <main className="flex-1 p-4 md:p-6">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1">Welcome back! Here's your restaurant overview.</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           {stats.map((stat, index) => (
             <Card key={index} style={{ backgroundColor: colors.backgrounds.card }}>
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">{stat.title}</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-900 truncate">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-full ${stat.color}`}>
-                    <stat.icon className="h-6 w-6 text-white" />
+                  <div className={`p-2 md:p-3 rounded-full ${stat.color} flex-shrink-0 ml-2`}>
+                    <stat.icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -66,19 +66,25 @@ const AdminDashboard = () => {
 
         {/* Sales Chart */}
         <Card style={{ backgroundColor: colors.backgrounds.card }}>
-          <CardHeader>
-            <CardTitle>Weekly Sales Overview</CardTitle>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Weekly Sales Overview</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="sales" fill={colors.primary[500]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="w-full h-64 md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={salesData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 12 }}
+                    interval={0}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="sales" fill={colors.primary[500]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </main>

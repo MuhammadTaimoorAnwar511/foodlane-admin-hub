@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pencil, Eye } from "lucide-react";
+import { Pencil } from "lucide-react";
 import colors from "@/theme/colors";
 
 interface TimeBlockData {
@@ -35,15 +35,15 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
   const renderTimelineBar = (schedule: DayScheduleData) => {
     if (schedule.isClosed) {
       return (
-        <div className="w-full h-8 bg-gray-200 rounded flex items-center justify-center">
-          <span className="text-sm text-gray-500">Closed</span>
+        <div className="w-full h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+          <span className="text-sm text-gray-500 font-medium">Closed</span>
         </div>
       );
     }
 
     if (schedule.is24h) {
       return (
-        <div className="w-full h-8 bg-green-500 rounded flex items-center justify-center">
+        <div className="w-full h-12 bg-blue-500 rounded-lg flex items-center justify-center relative">
           <span className="text-sm text-white font-medium">24/7</span>
         </div>
       );
@@ -51,8 +51,8 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
 
     if (schedule.timeBlocks.length === 0) {
       return (
-        <div className="w-full h-8 bg-gray-200 rounded flex items-center justify-center">
-          <span className="text-sm text-gray-500">No hours set</span>
+        <div className="w-full h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+          <span className="text-sm text-gray-500 font-medium">No hours set</span>
         </div>
       );
     }
@@ -62,8 +62,12 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
       a.startTime.localeCompare(b.startTime)
     );
 
+    // Get the main time block for display
+    const mainBlock = sortedBlocks[0];
+    const timeText = `${formatTime(mainBlock.startTime)} - ${formatTime(mainBlock.endTime)}`;
+
     return (
-      <div className="w-full h-8 bg-gray-200 rounded relative overflow-hidden">
+      <div className="w-full h-12 bg-gray-200 rounded-lg relative overflow-hidden">
         {sortedBlocks.map((block, index) => {
           const startMinutes = timeToMinutes(block.startTime);
           const endMinutes = timeToMinutes(block.endTime);
@@ -73,16 +77,22 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
           return (
             <div
               key={block.id}
-              className="absolute h-full bg-blue-500"
+              className="absolute h-full bg-blue-500 flex items-center justify-center"
               style={{
                 left: `${left}%`,
                 width: `${width}%`,
               }}
-            />
+            >
+              {index === 0 && (
+                <span className="text-xs text-white font-medium px-2 truncate">
+                  {timeText}
+                </span>
+              )}
+            </div>
           );
         })}
         
-        {/* Show gaps as yellow breaks for multiple blocks */}
+        {/* Show gaps as light gray for multiple blocks */}
         {sortedBlocks.length > 1 && sortedBlocks.slice(0, -1).map((block, index) => {
           const currentEnd = timeToMinutes(block.endTime);
           const nextStart = timeToMinutes(sortedBlocks[index + 1].startTime);
@@ -94,7 +104,7 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
             return (
               <div
                 key={`break-${index}`}
-                className="absolute h-full bg-yellow-400"
+                className="absolute h-full bg-gray-300"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
@@ -131,38 +141,43 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
     <div className="space-y-6">
       <Card style={{ backgroundColor: colors.backgrounds.card }}>
         <CardHeader>
-          <CardTitle>Weekly Schedule</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Weekly Schedule</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {schedules.map((schedule, index) => (
               <div
                 key={schedule.day}
-                className="group flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
+                className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer gap-4"
                 onClick={() => onEditDay(index)}
               >
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="w-20 text-sm font-medium text-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6 flex-1">
+                  <div className="w-full sm:w-20 text-sm font-medium text-gray-700">
                     {schedule.day}
                   </div>
-                  <div className="flex-1 max-w-md">
+                  <div className="flex-1 max-w-none sm:max-w-md">
                     {renderTimelineBar(schedule)}
                   </div>
-                  <div className="text-sm text-gray-600 min-w-0 flex-1">
+                  <div className="text-sm text-gray-600 min-w-0 flex-1 sm:hidden">
                     {getScheduleText(schedule)}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditDay(index);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center justify-between sm:justify-end">
+                  <div className="hidden sm:block text-sm text-gray-600 min-w-0 flex-1 mr-4">
+                    {getScheduleText(schedule)}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="opacity-70 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditDay(index);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
