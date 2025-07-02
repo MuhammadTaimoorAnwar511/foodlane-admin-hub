@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, 
   Package, 
@@ -7,7 +8,8 @@ import {
   Clock,
   Store,
   LogOut,
-  Menu
+  Menu,
+  Truck
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ const AdminSidebar = () => {
     { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
     { icon: Users, label: "Riders", path: "/admin/riders" },
     { icon: Clock, label: "Schedules", path: "/admin/schedules" },
+    { icon: Truck, label: "Delivery Settings", path: "/admin/delivery-settings" },
   ];
 
   return (

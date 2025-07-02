@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,19 +49,25 @@ const socialPlatforms = [
 ];
 
 const ShopProfileForm = () => {
-  const [formData, setFormData] = useState<ShopProfileData>({
-    shopName: "FastFood Delight",
-    tagline: "Delicious food delivered fast",
-    description: "We serve the best fast food in town with fresh ingredients and quick delivery.",
-    shortDescription: "Best fast food in town",
-    address: "123 Main Street, City Center",
-    coordinates: {
-      lat: "",
-      lng: ""
-    },
-    phoneNumbers: [{ id: "1", number: "", label: "Main" }],
-    whatsappNumbers: [{ id: "1", number: "", label: "Support" }],
-    socialLinks: []
+  const [formData, setFormData] = useState<ShopProfileData>(() => {
+    const saved = localStorage.getItem("shopProfile");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      shopName: "FastFood Delight",
+      tagline: "Delicious food delivered fast",
+      description: "We serve the best fast food in town with fresh ingredients and quick delivery.",
+      shortDescription: "Best fast food in town",
+      address: "123 Main Street, City Center",
+      coordinates: {
+        lat: "",
+        lng: ""
+      },
+      phoneNumbers: [{ id: "1", number: "", label: "Main" }],
+      whatsappNumbers: [{ id: "1", number: "", label: "Support" }],
+      socialLinks: []
+    };
   });
 
   const { register, handleSubmit, formState: { errors } } = useForm<ShopProfileData>({
@@ -153,11 +158,15 @@ const ShopProfileForm = () => {
   };
 
   const onSubmit = (data: ShopProfileData) => {
-    console.log("Saving shop profile:", { ...data, ...formData });
+    const profileData = { ...data, ...formData };
+    console.log("Saving shop profile:", profileData);
+    
+    // Store in localStorage
+    localStorage.setItem("shopProfile", JSON.stringify(profileData));
     
     // Emit shop-profile-updated event
     window.dispatchEvent(new CustomEvent('shop-profile-updated', {
-      detail: { ...data, ...formData }
+      detail: profileData
     }));
     
     toast.success("Shop profile updated successfully!");
