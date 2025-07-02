@@ -9,7 +9,7 @@ import {
   Store,
   LogOut,
   Menu,
-  Truck,
+  Bike,
   X
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -49,7 +49,7 @@ const AdminSidebar = () => {
     { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
     { icon: Users, label: "Riders", path: "/admin/riders" },
     { icon: Clock, label: "Schedules", path: "/admin/schedules" },
-    { icon: Truck, label: "Delivery Settings", path: "/admin/delivery-settings" },
+    { icon: Bike, label: "Delivery Settings", path: "/admin/delivery-settings" },
   ];
 
   const handleNavClick = () => {

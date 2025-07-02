@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Calendar, AlertTriangle, Eye } from "lucide-react";
+import { Clock, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -150,9 +150,9 @@ const Schedules = () => {
     <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
       
-      <main className="flex-1 p-4 md:p-6 ml-0 md:ml-0">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Schedule Management</h1>
+      <main className="flex-1 p-4 md:p-6 ml-0 md:ml-0 min-w-0">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">Schedule Management</h1>
           <p className="text-sm md:text-base text-gray-600 mt-1">Manage your shop's operating hours and availability</p>
         </div>
 
@@ -162,78 +162,80 @@ const Schedules = () => {
             onStatusChange={setGlobalStatus}
           />
           
-          <Card style={{ backgroundColor: colors.backgrounds.card }}>
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                <Clock className="h-5 w-5" />
-                Shop Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-auto">
-                  <TabsTrigger value="overview" className="flex items-center gap-2 text-xs md:text-sm p-2 md:p-3">
-                    <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Weekly Schedule</span>
-                    <span className="sm:hidden">Overview</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="editor" className="flex items-center gap-2 text-xs md:text-sm p-2 md:p-3">
-                    <Clock className="h-4 w-4" />
-                    <span className="hidden sm:inline">Schedule Editor</span>
-                    <span className="sm:hidden">Editor</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="overview" className="mt-4 md:mt-6">
-                  <ScheduleOverview 
-                    schedules={schedules}
-                    onEditDay={scrollToDay}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="editor" className="mt-4 md:mt-6 space-y-4 md:space-y-6">
-                  <div className="space-y-3 md:space-y-4">
-                    {schedules.map((schedule, index) => (
-                      <div 
-                        key={schedule.day}
-                        id={`day-schedule-${index}`}
-                        className="transition-all duration-200"
-                      >
-                        <DaySchedule
-                          schedule={schedule}
-                          onUpdate={(updates) => updateDaySchedule(index, updates)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+          <div className="w-full">
+            <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-auto mb-4">
+                <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs md:text-sm p-2 md:p-3">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Weekly Schedule</span>
+                  <span className="sm:hidden">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="editor" className="flex items-center gap-1 sm:gap-2 text-xs md:text-sm p-2 md:p-3">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Schedule Editor</span>
+                  <span className="sm:hidden">Editor</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="mt-0">
+                <ScheduleOverview 
+                  schedules={schedules}
+                  onEditDay={scrollToDay}
+                />
+              </TabsContent>
+              
+              <TabsContent value="editor" className="mt-0 space-y-4 md:space-y-6">
+                <Card style={{ backgroundColor: colors.backgrounds.card }}>
+                  <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                      <Clock className="h-5 w-5" />
+                      Schedule Editor
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 md:p-6 pt-0">
+                    <div className="space-y-3 md:space-y-4">
+                      {schedules.map((schedule, index) => (
+                        <div 
+                          key={schedule.day}
+                          id={`day-schedule-${index}`}
+                          className="transition-all duration-200"
+                        >
+                          <DaySchedule
+                            schedule={schedule}
+                            onUpdate={(updates) => updateDaySchedule(index, updates)}
+                          />
+                        </div>
+                      ))}
+                    </div>
 
-                  {validateSchedules().length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 md:p-4">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <h4 className="font-medium text-yellow-800 text-sm md:text-base">Schedule Warnings</h4>
-                          <ul className="mt-1 text-xs md:text-sm text-yellow-700 list-disc list-inside space-y-1">
-                            {validateSchedules().map((warning, index) => (
-                              <li key={index} className="break-words">{warning}</li>
-                            ))}
-                          </ul>
+                    {validateSchedules().length > 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 md:p-4 mt-4">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <h4 className="font-medium text-yellow-800 text-sm md:text-base">Schedule Warnings</h4>
+                            <ul className="mt-1 text-xs md:text-sm text-yellow-700 list-disc list-inside space-y-1">
+                              {validateSchedules().map((warning, index) => (
+                                <li key={index} className="break-words">{warning}</li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <Button 
-                    onClick={handleSave}
-                    style={{ backgroundColor: colors.primary[500] }}
-                    className="w-full h-10 md:h-11 text-sm md:text-base"
-                  >
-                    Save Schedule
-                  </Button>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                    <Button 
+                      onClick={handleSave}
+                      style={{ backgroundColor: colors.primary[500] }}
+                      className="w-full h-10 md:h-11 text-sm md:text-base mt-4"
+                    >
+                      Save Schedule
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </main>
     </div>
