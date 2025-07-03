@@ -41,12 +41,6 @@ interface DealItem {
   price: number;
 }
 
-interface DealAddon {
-  id: string;
-  name: string;
-  price: number;
-}
-
 interface Deal {
   id?: string;
   name: string;
@@ -63,7 +57,7 @@ interface Deal {
   pricingMode: "fixed" | "calculated";
   discountPercent?: number;
   enableAddons: boolean;
-  addons: DealAddon[];
+  addons: { id: string; name: string; price: number }[];
   countStock: boolean;
 }
 
@@ -171,34 +165,6 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
 
   const handleRemoveItem = (itemId: string) => {
     setDealItems(prev => prev.filter(item => item.id !== itemId));
-  };
-
-  const handleAddAddon = () => {
-    const newAddon: DealAddon = {
-      id: `${Date.now()}`,
-      name: "",
-      price: 0,
-    };
-    setFormData(prev => ({
-      ...prev,
-      addons: [...prev.addons, newAddon],
-    }));
-  };
-
-  const handleRemoveAddon = (addonId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      addons: prev.addons.filter(addon => addon.id !== addonId),
-    }));
-  };
-
-  const handleUpdateAddon = (addonId: string, field: keyof DealAddon, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      addons: prev.addons.map(addon =>
-        addon.id === addonId ? { ...addon, [field]: value } : addon
-      ),
-    }));
   };
 
   const handleSave = () => {
@@ -427,73 +393,6 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Add-ons */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Add-ons</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="enable-addons"
-                    checked={formData.enableAddons}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enableAddons: checked === true }))}
-                  />
-                  <Label htmlFor="enable-addons">Enable add-ons</Label>
-                </div>
-
-                {formData.enableAddons && (
-                  <div className="space-y-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Add-on Name</TableHead>
-                          <TableHead>Additional Price</TableHead>
-                          <TableHead className="w-12"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {formData.addons.map((addon) => (
-                          <TableRow key={addon.id}>
-                            <TableCell>
-                              <Input
-                                value={addon.name}
-                                onChange={(e) => handleUpdateAddon(addon.id, "name", e.target.value)}
-                                placeholder="Add-on name"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={addon.price}
-                                onChange={(e) => handleUpdateAddon(addon.id, "price", parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveAddon(addon.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    <Button onClick={handleAddAddon} variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Add-on
-                    </Button>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 

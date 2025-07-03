@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Plus, Search, Edit, Copy, Trash2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -47,6 +46,10 @@ interface Deal {
   endDate?: Date;
   startTime?: string;
   endTime?: string;
+  pricingMode: "fixed" | "calculated";
+  enableAddons: boolean;
+  addons: { id: string; name: string; price: number }[];
+  countStock: boolean;
 }
 
 const mockDeals: Deal[] = [
@@ -61,7 +64,11 @@ const mockDeals: Deal[] = [
       { product: "345ml Drink", quantity: 1 }
     ],
     status: "active",
-    category: "Combos"
+    category: "Combos",
+    pricingMode: "fixed",
+    enableAddons: false,
+    addons: [],
+    countStock: true
   },
   {
     id: "2",
@@ -73,7 +80,11 @@ const mockDeals: Deal[] = [
       { product: "1.5L Drink", quantity: 1 }
     ],
     status: "active",
-    category: "Family Deals"
+    category: "Family Deals",
+    pricingMode: "fixed",
+    enableAddons: false,
+    addons: [],
+    countStock: true
   },
   {
     id: "3",
@@ -84,7 +95,11 @@ const mockDeals: Deal[] = [
       { product: "Small Fries", quantity: 1 }
     ],
     status: "draft",
-    category: "Student Deals"
+    category: "Student Deals",
+    pricingMode: "fixed",
+    enableAddons: false,
+    addons: [],
+    countStock: true
   }
 ];
 
