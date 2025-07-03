@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import Products from "./pages/Products";
+import Deals from "./pages/Deals";
 import Categories from "./pages/Categories";
 import Orders from "./pages/Orders";
 import Riders from "./pages/Riders";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/shop-profile" element={<ShopProfile />} />
           <Route path="/admin/products" element={<Products />} />
+          <Route path="/admin/deals" element={<Deals />} />
           <Route path="/admin/categories" element={<Categories />} />
           <Route path="/admin/orders" element={<Orders />} />
           <Route path="/admin/riders" element={<Riders />} />
