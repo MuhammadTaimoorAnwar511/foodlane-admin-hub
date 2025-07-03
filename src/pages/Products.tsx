@@ -598,7 +598,7 @@ const Products = () => {
                     <Checkbox
                       id="enableAddons"
                       checked={enableAddons}
-                      onCheckedChange={setEnableAddons}
+                      onCheckedChange={(checked) => setEnableAddons(checked === true)}
                     />
                     <Label htmlFor="enableAddons">Enable add-ons</Label>
                   </div>
