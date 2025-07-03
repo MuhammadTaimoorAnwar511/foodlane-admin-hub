@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, X } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
@@ -105,6 +106,8 @@ const Products = () => {
   const [addons, setAddons] = useState<ProductAddon[]>([]);
   const [newVariant, setNewVariant] = useState({ name: "", price: "", offerPrice: "" });
   const [newAddon, setNewAddon] = useState({ name: "", price: "" });
+  const [pricingMode, setPricingMode] = useState<'single' | 'variants'>('single');
+  const [enableAddons, setEnableAddons] = useState(false);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("adminLoggedIn");
@@ -122,8 +125,16 @@ const Products = () => {
     return product.offerPrice;
   };
 
-  // Helper function to check if product has variants or addons
-  const hasVariantsOrAddons = variants.length > 0 || addons.length > 0;
+  // Helper function to get display price for summary
+  const getDisplayPrice = () => {
+    if (pricingMode === 'single') {
+      return formData.offerPrice ? `PKR ${formData.offerPrice}` : 'Not set';
+    } else if (variants.length > 0) {
+      const lowest = Math.min(...variants.map(v => v.offerPrice));
+      return `From PKR ${lowest}`;
+    }
+    return 'Not set';
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,9 +160,14 @@ const Products = () => {
       return;
     }
     
-    // Validation: If no variants, require base pricing
-    if (variants.length === 0 && (!formData.price || !formData.offerPrice)) {
-      toast.error("Regular Price and Offer Price are required when no variants are specified");
+    // Validation: pricing mode requirements
+    if (pricingMode === 'single' && (!formData.price || !formData.offerPrice)) {
+      toast.error("Regular Price and Offer Price are required for single pricing");
+      return;
+    }
+
+    if (pricingMode === 'variants' && variants.length === 0) {
+      toast.error("At least one variant is required when using variant pricing");
       return;
     }
 
@@ -167,11 +183,11 @@ const Products = () => {
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Date.now(),
       ...formData,
-      price: variants.length > 0 ? 0 : parseFloat(formData.price),
-      offerPrice: variants.length > 0 ? 0 : parseFloat(formData.offerPrice),
+      price: pricingMode === 'single' ? parseFloat(formData.price) : 0,
+      offerPrice: pricingMode === 'single' ? parseFloat(formData.offerPrice) : 0,
       availability,
-      variants,
-      addons,
+      variants: pricingMode === 'variants' ? variants : [],
+      addons: enableAddons ? addons : [],
       unitsInStock
     };
 
@@ -204,6 +220,8 @@ const Products = () => {
     setNewVariant({ name: "", price: "", offerPrice: "" });
     setNewAddon({ name: "", price: "" });
     setEditingProduct(null);
+    setPricingMode('single');
+    setEnableAddons(false);
   };
 
   const handleEdit = (product: Product) => {
@@ -221,6 +239,8 @@ const Products = () => {
     });
     setVariants(product.variants);
     setAddons(product.addons);
+    setPricingMode(product.variants.length > 0 ? 'variants' : 'single');
+    setEnableAddons(product.addons.length > 0);
     setShowDialog(true);
   };
 
@@ -322,6 +342,7 @@ const Products = () => {
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Basic Product Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Product Name *</Label>
@@ -352,104 +373,6 @@ const Products = () => {
                   </div>
                 </div>
 
-                {/* Stock Management Section */}
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-lg font-semibold">Stock Management</Label>
-                    <p className="text-sm text-gray-600">Choose how to manage product availability</p>
-                  </div>
-                  
-                  <RadioGroup
-                    value={formData.stockType}
-                    onValueChange={(value: 'unlimited' | 'fixed') => setFormData({...formData, stockType: value})}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="unlimited" id="unlimited" />
-                      <Label htmlFor="unlimited">Unlimited stock - Simple Available/Out of stock toggle</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="fixed" id="fixed" />
-                      <Label htmlFor="fixed">Fixed units - Track specific inventory count</Label>
-                    </div>
-                  </RadioGroup>
-
-                  {formData.stockType === 'unlimited' ? (
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="availability"
-                        checked={formData.availability}
-                        onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
-                      />
-                      <Label htmlFor="availability">
-                        Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
-                      </Label>
-                    </div>
-                  ) : (
-                    <div>
-                      <Label htmlFor="unitsInStock">Units in Stock *</Label>
-                      <Input
-                        id="unitsInStock"
-                        type="number"
-                        min="0"
-                        value={formData.unitsInStock}
-                        onChange={(e) => setFormData({...formData, unitsInStock: e.target.value})}
-                        placeholder="Enter number of units available"
-                        required={formData.stockType === 'fixed'}
-                      />
-                      <p className="text-sm text-gray-600 mt-1">
-                        Product will automatically become unavailable when stock reaches 0
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Base Pricing - Only show when no variants exist */}
-                {variants.length === 0 && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h4 className="font-semibold text-blue-800 mb-2">Base Pricing</h4>
-                      <p className="text-sm text-blue-700">
-                        Since no variants are added, base pricing is required. This will be the price displayed for this product.
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="price">Regular Price (PKR) *</Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          value={formData.price}
-                          onChange={(e) => setFormData({...formData, price: e.target.value})}
-                          required={variants.length === 0}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="offerPrice">Offer Price (PKR) *</Label>
-                        <Input
-                          id="offerPrice"
-                          type="number"
-                          value={formData.offerPrice}
-                          onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
-                          required={variants.length === 0}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pricing Note when variants exist */}
-                {variants.length > 0 && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <h4 className="font-semibold text-amber-800 mb-2">💡 Variant-Based Pricing Active</h4>
-                    <p className="text-sm text-amber-700">
-                      Since you have variants, pricing will be managed through those options. The lowest variant price will be displayed as "From PKR X" on product cards.
-                    </p>
-                  </div>
-                )}
-
                 <div>
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
@@ -473,101 +396,296 @@ const Products = () => {
                   />
                 </div>
 
-                {/* Variants Section */}
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-lg font-semibold">Product Variants</Label>
-                    <p className="text-sm text-gray-600">Add different sizes or variations with their specific pricing</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-4 gap-2 items-end">
-                    <div>
-                      <Label>Variant Name</Label>
-                      <Input
-                        placeholder="e.g., Small, Large"
-                        value={newVariant.name}
-                        onChange={(e) => setNewVariant({...newVariant, name: e.target.value})}
-                      />
+                {/* Stock Management Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Stock Management</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <RadioGroup
+                        value={formData.stockType}
+                        onValueChange={(value: 'unlimited' | 'fixed') => setFormData({...formData, stockType: value})}
+                        className="flex items-center space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="unlimited" id="unlimited" />
+                          <Label htmlFor="unlimited">Unlimited</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="fixed" id="fixed" />
+                          <Label htmlFor="fixed">Fixed units</Label>
+                        </div>
+                      </RadioGroup>
+                      
+                      {formData.stockType === 'fixed' && (
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="quantity">Quantity:</Label>
+                          <Input
+                            id="quantity"
+                            type="number"
+                            min="0"
+                            value={formData.unitsInStock}
+                            onChange={(e) => setFormData({...formData, unitsInStock: e.target.value})}
+                            className="w-24"
+                            required
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <Label>Regular Price (PKR)</Label>
-                      <Input
-                        type="number"
-                        value={newVariant.price}
-                        onChange={(e) => setNewVariant({...newVariant, price: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label>Offer Price (PKR)</Label>
-                      <Input
-                        type="number"
-                        value={newVariant.offerPrice}
-                        onChange={(e) => setNewVariant({...newVariant, offerPrice: e.target.value})}
-                      />
-                    </div>
-                    <Button type="button" onClick={addVariant}>Add</Button>
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {variants.map((variant, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center gap-2">
-                        {variant.name} - PKR {variant.offerPrice}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
-                          onClick={() => removeVariant(index)}
+                    {formData.stockType === 'unlimited' && (
+                      <div className="flex items-center space-x-2 mt-4">
+                        <Switch
+                          id="availability"
+                          checked={formData.availability}
+                          onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
                         />
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+                        <Label htmlFor="availability">
+                          Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
+                        </Label>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Pricing Mode Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Pricing Mode</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                      <button
+                        type="button"
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                          pricingMode === 'single'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        onClick={() => setPricingMode('single')}
+                      >
+                        Single price (no variants)
+                      </button>
+                      <button
+                        type="button"
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                          pricingMode === 'variants'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        onClick={() => setPricingMode('variants')}
+                      >
+                        Has variants
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Base Pricing Card - Show only when single pricing mode */}
+                {pricingMode === 'single' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Base Pricing</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="price">Regular Price (PKR) *</Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            value={formData.price}
+                            onChange={(e) => setFormData({...formData, price: e.target.value})}
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="offerPrice">Offer Price (PKR) *</Label>
+                          <Input
+                            id="offerPrice"
+                            type="number"
+                            value={formData.offerPrice}
+                            onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Variants Table - Show only when variants pricing mode */}
+                {pricingMode === 'variants' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Variants</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-4 gap-2 items-end">
+                          <div>
+                            <Label>Variant Name</Label>
+                            <Input
+                              placeholder="e.g., Small, Large"
+                              value={newVariant.name}
+                              onChange={(e) => setNewVariant({...newVariant, name: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <Label>Regular Price (PKR)</Label>
+                            <Input
+                              type="number"
+                              value={newVariant.price}
+                              onChange={(e) => setNewVariant({...newVariant, price: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <Label>Offer Price (PKR)</Label>
+                            <Input
+                              type="number"
+                              value={newVariant.offerPrice}
+                              onChange={(e) => setNewVariant({...newVariant, offerPrice: e.target.value})}
+                            />
+                          </div>
+                          <Button type="button" onClick={addVariant} style={{ backgroundColor: colors.primary[500] }}>
+                            Add
+                          </Button>
+                        </div>
+
+                        {variants.length > 0 && (
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-2 text-left">Variant Name</th>
+                                  <th className="px-4 py-2 text-left">Regular Price</th>
+                                  <th className="px-4 py-2 text-left">Offer Price</th>
+                                  <th className="px-4 py-2 text-center">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {variants.map((variant, index) => (
+                                  <tr key={index} className="border-t">
+                                    <td className="px-4 py-2">{variant.name}</td>
+                                    <td className="px-4 py-2">PKR {variant.price}</td>
+                                    <td className="px-4 py-2">PKR {variant.offerPrice}</td>
+                                    <td className="px-4 py-2 text-center">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeVariant(index)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Add-ons Section */}
                 <div className="space-y-4">
-                  <div>
-                    <Label className="text-lg font-semibold">Product Add-ons</Label>
-                    <p className="text-sm text-gray-600">Add optional extras customers can choose</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 items-end">
-                    <div>
-                      <Label>Add-on Name</Label>
-                      <Input
-                        placeholder="e.g., Extra Cheese"
-                        value={newAddon.name}
-                        onChange={(e) => setNewAddon({...newAddon, name: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label>Additional Price (PKR)</Label>
-                      <Input
-                        type="number"
-                        value={newAddon.price}
-                        onChange={(e) => setNewAddon({...newAddon, price: e.target.value})}
-                      />
-                    </div>
-                    <Button type="button" onClick={addAddon}>Add</Button>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enableAddons"
+                      checked={enableAddons}
+                      onCheckedChange={setEnableAddons}
+                    />
+                    <Label htmlFor="enableAddons">Enable add-ons</Label>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {addons.map((addon, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center gap-2 bg-green-50">
-                        {addon.name} (+PKR {addon.price})
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
-                          onClick={() => removeAddon(index)}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
+                  {enableAddons && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Add-ons</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-3 gap-2 items-end">
+                            <div>
+                              <Label>Add-on Name</Label>
+                              <Input
+                                placeholder="e.g., Extra Cheese"
+                                value={newAddon.name}
+                                onChange={(e) => setNewAddon({...newAddon, name: e.target.value})}
+                              />
+                            </div>
+                            <div>
+                              <Label>Additional Price (PKR)</Label>
+                              <Input
+                                type="number"
+                                value={newAddon.price}
+                                onChange={(e) => setNewAddon({...newAddon, price: e.target.value})}
+                              />
+                            </div>
+                            <Button type="button" onClick={addAddon} style={{ backgroundColor: colors.primary[500] }}>
+                              Add
+                            </Button>
+                          </div>
+
+                          {addons.length > 0 && (
+                            <div className="border rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left">Add-on Name</th>
+                                    <th className="px-4 py-2 text-left">Additional Price</th>
+                                    <th className="px-4 py-2 text-center">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {addons.map((addon, index) => (
+                                    <tr key={index} className="border-t">
+                                      <td className="px-4 py-2">{addon.name}</td>
+                                      <td className="px-4 py-2">PKR {addon.price}</td>
+                                      <td className="px-4 py-2 text-center">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeAddon(index)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90">
-                    {editingProduct ? "Update" : "Add"} Product
-                  </Button>
+                {/* Live Summary Strip */}
+                <div className="sticky bottom-0 bg-gray-50 border-t p-4 -mx-6 -mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm text-gray-600 space-x-4">
+                      <span><strong>Stock:</strong> {formData.stockType === 'unlimited' ? 'Unlimited' : `Fixed: ${formData.unitsInStock || 0} left`}</span>
+                      <span><strong>Display price:</strong> {getDisplayPrice()}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="ghost" onClick={() => setShowDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90">
+                      {editingProduct ? "Update" : "Add"} Product
+                    </Button>
+                  </div>
                 </div>
               </form>
             </DialogContent>
