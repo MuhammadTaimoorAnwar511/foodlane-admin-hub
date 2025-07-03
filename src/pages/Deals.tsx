@@ -47,26 +47,7 @@ interface Deal {
   endDate?: Date;
   startTime?: string;
   endTime?: string;
-  pricingMode: "fixed" | "calculated";
-  discountPercent?: number;
-  enableAddons: boolean;
-  addons: { id: string; name: string; price: number }[];
-  countStock: boolean;
-  limitedCustomers: boolean;
-  customerLimit?: number;
 }
-
-// Mock data for categories (this should come from your category management)
-const mockCategories = ["Combos", "Family Deals", "Student Deals", "Beverages", "Desserts"];
-
-// Mock data for products (this should come from your product management)
-const mockProducts = [
-  { id: "1", name: "Zinger Burger", price: 450, variants: ["Regular", "Spicy"] },
-  { id: "2", name: "Chicken Burger", price: 350, variants: [] },
-  { id: "3", name: "Fries", price: 150, variants: ["Small", "Medium", "Large"] },
-  { id: "4", name: "Drink", price: 120, variants: ["345ml", "500ml", "1.5L"] },
-  { id: "5", name: "Chicken Pieces", price: 800, variants: ["4 pcs", "6 pcs", "8 pcs"] },
-];
 
 const mockDeals: Deal[] = [
   {
@@ -80,12 +61,7 @@ const mockDeals: Deal[] = [
       { product: "345ml Drink", quantity: 1 }
     ],
     status: "active",
-    category: "Combos",
-    pricingMode: "fixed",
-    enableAddons: false,
-    addons: [],
-    countStock: true,
-    limitedCustomers: false
+    category: "Combos"
   },
   {
     id: "2",
@@ -97,15 +73,7 @@ const mockDeals: Deal[] = [
       { product: "1.5L Drink", quantity: 1 }
     ],
     status: "active",
-    category: "Family Deals",
-    pricingMode: "fixed",
-    enableAddons: true,
-    addons: [
-      { id: "1", name: "Extra Sauce", price: 50 }
-    ],
-    countStock: true,
-    limitedCustomers: true,
-    customerLimit: 100
+    category: "Family Deals"
   },
   {
     id: "3",
@@ -116,13 +84,7 @@ const mockDeals: Deal[] = [
       { product: "Small Fries", quantity: 1 }
     ],
     status: "draft",
-    category: "Student Deals",
-    pricingMode: "calculated",
-    discountPercent: 15,
-    enableAddons: false,
-    addons: [],
-    countStock: true,
-    limitedCustomers: false
+    category: "Student Deals"
   }
 ];
 
@@ -137,7 +99,7 @@ const Deals = () => {
   const [dealToDelete, setDealToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
-  const categories = ["all", ...mockCategories];
+  const categories = ["all", "Combos", "Family Deals", "Student Deals", "Beverages", "Desserts"];
 
   const filteredDeals = deals.filter(deal => {
     const matchesSearch = deal.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -244,17 +206,6 @@ const Deals = () => {
     );
   };
 
-  const getCustomerLimitDisplay = (deal: Deal) => {
-    if (deal.limitedCustomers && deal.customerLimit) {
-      return (
-        <div className="text-xs text-gray-500">
-          Limited to first {deal.customerLimit} customers
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
@@ -333,7 +284,6 @@ const Deals = () => {
                     <TableHead>Price</TableHead>
                     <TableHead>Included Items</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Customer Limit</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -354,24 +304,9 @@ const Deals = () => {
                           {deal.name}
                         </button>
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          {getPriceDisplay(deal)}
-                          {deal.enableAddons && deal.addons.length > 0 && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              + Add-ons available
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableCell>{getPriceDisplay(deal)}</TableCell>
                       <TableCell>{getItemsList(deal.items)}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
-                      <TableCell>
-                        {getCustomerLimitDisplay(deal)}
-                        {!deal.limitedCustomers && (
-                          <span className="text-xs text-gray-500">Unlimited</span>
-                        )}
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -401,7 +336,7 @@ const Deals = () => {
                   ))}
                   {filteredDeals.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         No deals found. Create your first deal to get started.
                       </TableCell>
                     </TableRow>
@@ -418,8 +353,6 @@ const Deals = () => {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         deal={editingDeal}
-        categories={mockCategories}
-        products={mockProducts}
         onSave={(dealData) => {
           if (editingDeal && editingDeal.id) {
             // Update existing deal
