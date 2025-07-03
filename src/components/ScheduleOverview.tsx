@@ -25,8 +25,6 @@ interface ScheduleOverviewProps {
 }
 
 const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
-  const [activeTab, setActiveTab] = useState('overview');
-
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
@@ -42,6 +40,36 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
 
   const hasBreaks = (schedule: DayScheduleData) => {
     return schedule.timeBlocks.some(block => block.kind === "break");
+  };
+
+  // Generate break segments between work blocks
+  const generateBreakSegments = (schedule: DayScheduleData) => {
+    if (schedule.isClosed || schedule.is24h || schedule.timeBlocks.length === 0) {
+      return [];
+    }
+
+    // Sort work blocks by start time
+    const workBlocks = schedule.timeBlocks
+      .filter(block => block.kind !== "break")
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const breakSegments = [];
+    
+    for (let i = 0; i < workBlocks.length - 1; i++) {
+      const currentEnd = workBlocks[i].endTime;
+      const nextStart = workBlocks[i + 1].startTime;
+      
+      if (currentEnd < nextStart) {
+        breakSegments.push({
+          id: `break-${i}`,
+          startTime: currentEnd,
+          endTime: nextStart,
+          kind: "break" as const
+        });
+      }
+    }
+    
+    return breakSegments;
   };
 
   const renderTimelineBar = (schedule: DayScheduleData) => {
@@ -75,14 +103,18 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
       );
     }
 
-    // Sort time blocks by start time
-    const sortedBlocks = [...schedule.timeBlocks].sort((a, b) => 
+    // Combine work blocks with auto-generated break segments
+    const workBlocks = schedule.timeBlocks.filter(block => block.kind !== "break");
+    const explicitBreaks = schedule.timeBlocks.filter(block => block.kind === "break");
+    const autoBreaks = generateBreakSegments(schedule);
+    
+    const allSegments = [...workBlocks, ...explicitBreaks, ...autoBreaks].sort((a, b) => 
       a.startTime.localeCompare(b.startTime)
     );
 
     return (
       <div className="relative h-8 rounded-md bg-slate-100/60">
-        {sortedBlocks.map((block, index) => {
+        {allSegments.map((block, index) => {
           const startMinutes = timeToMinutes(block.startTime);
           const endMinutes = timeToMinutes(block.endTime);
           const left = (startMinutes / 1440) * 100;
@@ -94,12 +126,13 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
           
           return (
             <div
-              key={index}
+              key={block.id || index}
               className={`${bgColor} rounded-md h-full absolute flex items-center justify-center`}
               style={{
                 left: `${left}%`,
                 width: `${width}%`,
               }}
+              title={isBreak ? `Break — ${formatTime(block.startTime)} to ${formatTime(block.endTime)}` : timeText}
             >
               <span className="text-white text-xs font-semibold px-1 truncate">
                 {timeText}
@@ -115,7 +148,12 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
     if (schedule.isClosed) return { text: "Closed", class: "bg-red-400/10 text-red-600" };
     if (schedule.is24h) return { text: "24/7", class: "bg-green-500/10 text-green-600" };
     if (schedule.timeBlocks.length === 0) return { text: "No hours", class: "bg-slate-100 text-slate-500" };
-    if (hasBreaks(schedule)) return { text: "Split Shift", class: "bg-yellow-200 text-yellow-800" };
+    
+    // Check for breaks (either explicit or gaps between work blocks)
+    const explicitBreaks = hasBreaks(schedule);
+    const autoBreaks = generateBreakSegments(schedule).length > 0;
+    
+    if (explicitBreaks || autoBreaks) return { text: "Split Shift", class: "bg-yellow-200 text-yellow-800" };
     return { text: "Open", class: "bg-blue-100 text-blue-700" };
   };
 
@@ -127,36 +165,8 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
         <h2 className="font-semibold text-lg sm:text-xl ml-2">Shop Schedule</h2>
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex w-full mt-4 bg-slate-50 rounded-md p-1">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`rounded-md w-1/2 py-2 px-2 sm:px-3 flex items-center justify-center transition-colors text-xs sm:text-sm ${
-            activeTab === 'overview' 
-              ? 'bg-white font-medium text-slate-900 shadow-sm' 
-              : 'text-slate-500 hover:bg-slate-100'
-          }`}
-        >
-          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Weekly Schedule Overview</span>
-          <span className="sm:hidden">Overview</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('editor')}
-          className={`rounded-md w-1/2 py-2 px-2 sm:px-3 flex items-center justify-center transition-colors text-xs sm:text-sm ${
-            activeTab === 'editor' 
-              ? 'bg-white font-medium text-slate-900 shadow-sm' 
-              : 'text-slate-500 hover:bg-slate-100'
-          }`}
-        >
-          <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Schedule Editor</span>
-          <span className="sm:hidden">Editor</span>
-        </button>
-      </div>
-
       {/* Legend Badges */}
-      <div className="flex items-center gap-1 sm:gap-2 mt-3 flex-wrap">
+      <div className="flex items-center gap-1 sm:gap-2 mt-4 flex-wrap">
         <span className="bg-blue-600/10 text-blue-700 rounded-full text-xs font-semibold px-2 sm:px-3 py-1">
           Working Hours
         </span>
@@ -175,7 +185,9 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
       <div className="space-y-3 mt-4 sm:mt-6">
         {schedules.map((schedule, index) => {
           const status = getStatusBadge(schedule);
-          const hasSplitShift = hasBreaks(schedule);
+          const explicitBreaks = hasBreaks(schedule);
+          const autoBreaks = generateBreakSegments(schedule).length > 0;
+          const hasSplitShift = explicitBreaks || autoBreaks;
           const rowBgColor = hasSplitShift ? "bg-yellow-50" : "bg-blue-50/50";
           
           return (
@@ -200,6 +212,7 @@ const ScheduleOverview = ({ schedules, onEditDay }: ScheduleOverviewProps) => {
                     onEditDay(index);
                   }}
                   className="bg-orange-600 hover:bg-orange-700 text-white rounded-full p-2 shadow-md cursor-pointer transition flex-shrink-0"
+                  aria-label={`Edit ${schedule.day} schedule`}
                 >
                   <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
