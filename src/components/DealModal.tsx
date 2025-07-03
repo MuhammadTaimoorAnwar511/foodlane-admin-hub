@@ -47,6 +47,13 @@ interface DealAddon {
   price: number;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  variants: string[];
+}
+
 interface Deal {
   id?: string;
   name: string;
@@ -65,26 +72,20 @@ interface Deal {
   enableAddons: boolean;
   addons: DealAddon[];
   countStock: boolean;
+  limitedCustomers: boolean;
+  customerLimit?: number;
 }
 
 interface DealModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deal?: Deal | null;
+  categories: string[];
+  products: Product[];
   onSave: (deal: Deal) => void;
 }
 
-const mockProducts = [
-  { id: "1", name: "Zinger Burger", price: 450, variants: ["Regular", "Spicy"] },
-  { id: "2", name: "Chicken Burger", price: 350, variants: [] },
-  { id: "3", name: "Fries", price: 150, variants: ["Small", "Medium", "Large"] },
-  { id: "4", name: "Drink", price: 120, variants: ["345ml", "500ml", "1.5L"] },
-  { id: "5", name: "Chicken Pieces", price: 800, variants: ["4 pcs", "6 pcs", "8 pcs"] },
-];
-
-const mockCategories = ["Combos", "Family Deals", "Student Deals", "Beverages", "Desserts"];
-
-const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
+const DealModal = ({ open, onOpenChange, deal, categories, products, onSave }: DealModalProps) => {
   const [formData, setFormData] = useState<Deal>({
     name: "",
     category: "",
@@ -95,6 +96,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     enableAddons: false,
     addons: [],
     countStock: true,
+    limitedCustomers: false,
   });
 
   const [dealItems, setDealItems] = useState<DealItem[]>([]);
@@ -114,7 +116,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
         product: item.product,
         quantity: item.quantity,
         variant: item.variant || "",
-        price: mockProducts.find(p => p.name === item.product)?.price || 0,
+        price: products.find(p => p.name === item.product)?.price || 0,
       }));
       setDealItems(convertedItems);
     } else {
@@ -128,10 +130,11 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
         enableAddons: false,
         addons: [],
         countStock: true,
+        limitedCustomers: false,
       });
       setDealItems([]);
     }
-  }, [deal, open]);
+  }, [deal, open, products]);
 
   const calculateSubtotal = () => {
     return dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -147,13 +150,17 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     }
   };
 
+  const calculateAddonsPricing = () => {
+    return formData.addons.reduce((sum, addon) => sum + addon.price, 0);
+  };
+
   const handleAddItem = () => {
     if (!newItem.product) {
       toast.error("Please select a product");
       return;
     }
 
-    const product = mockProducts.find(p => p.name === newItem.product);
+    const product = products.find(p => p.name === newItem.product);
     if (!product) return;
 
     const item: DealItem = {
@@ -207,6 +214,11 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
       return;
     }
 
+    if (formData.limitedCustomers && (!formData.customerLimit || formData.customerLimit <= 0)) {
+      toast.error("Please set a valid customer limit");
+      return;
+    }
+
     const dealData: Deal = {
       ...formData,
       items: dealItems.map(item => ({
@@ -220,7 +232,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     onSave(dealData);
   };
 
-  const selectedProduct = mockProducts.find(p => p.name === newItem.product);
+  const selectedProduct = products.find(p => p.name === newItem.product);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -258,7 +270,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCategories.map(category => (
+                      {categories.map(category => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
@@ -281,6 +293,40 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                   {formData.status === "active" ? "Active" : "Draft"}
                 </Badge>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Customer Limit */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Customer Availability</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="limited-customers"
+                  checked={formData.limitedCustomers}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, limitedCustomers: checked === true }))}
+                />
+                <Label htmlFor="limited-customers">Limit to first N customers</Label>
+              </div>
+
+              {formData.limitedCustomers && (
+                <div className="space-y-2">
+                  <Label htmlFor="customer-limit">Customer Limit *</Label>
+                  <Input
+                    id="customer-limit"
+                    type="number"
+                    min="1"
+                    value={formData.customerLimit || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerLimit: parseInt(e.target.value) || undefined }))}
+                    placeholder="e.g., 100"
+                  />
+                  <p className="text-sm text-gray-500">
+                    Deal will only be available to the first {formData.customerLimit || "N"} customers who order it
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -491,6 +537,16 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                       <Plus className="h-4 w-4 mr-2" />
                       Add Add-on
                     </Button>
+
+                    {formData.addons.length > 0 && (
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <div className="text-sm space-y-1">
+                          <div className="font-medium">Add-ons Pricing Impact:</div>
+                          <div>Total add-on value: PKR {calculateAddonsPricing()}</div>
+                          <div className="text-gray-600">Customers can choose from these add-ons when ordering this deal</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -524,6 +580,12 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
             <div className="text-sm text-gray-600">
               <span className="font-medium">Items:</span> {dealItems.length} • 
               <span className="font-medium"> Price:</span> PKR {calculateDisplayPrice()}
+              {formData.enableAddons && formData.addons.length > 0 && (
+                <span> • <span className="font-medium">Add-ons:</span> {formData.addons.length}</span>
+              )}
+              {formData.limitedCustomers && formData.customerLimit && (
+                <span> • <span className="font-medium">Limit:</span> {formData.customerLimit} customers</span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -550,7 +612,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockProducts.map(product => (
+                    {products.map(product => (
                       <SelectItem key={product.id} value={product.name}>
                         {product.name} - PKR {product.price}
                       </SelectItem>
