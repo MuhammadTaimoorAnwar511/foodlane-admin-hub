@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ interface Deal {
   name: string;
   category: string;
   image?: string;
-  status: "active" | "draft";
+  status: "active" | "draft" | "ended";
   startDate?: Date;
   endDate?: Date;
   startTime?: string;
@@ -56,8 +55,6 @@ interface Deal {
   offerPrice?: number;
   pricingMode: "fixed" | "calculated";
   discountPercent?: number;
-  enableAddons: boolean;
-  addons: { id: string; name: string; price: number }[];
   countStock: boolean;
 }
 
@@ -86,8 +83,6 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     items: [],
     price: 0,
     pricingMode: "fixed",
-    enableAddons: false,
-    addons: [],
     countStock: true,
   });
 
@@ -119,8 +114,6 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
         items: [],
         price: 0,
         pricingMode: "fixed",
-        enableAddons: false,
-        addons: [],
         countStock: true,
       });
       setDealItems([]);
