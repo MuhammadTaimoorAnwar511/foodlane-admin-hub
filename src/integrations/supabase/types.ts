@@ -9,7 +9,230 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          applicable_categories: Json | null
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string | null
+          id: string
+          is_first_order_only: boolean
+          max_discount_amount: number | null
+          min_order_amount: number | null
+          name: string
+          start_date: string | null
+          status: string
+          updated_at: string
+          usage_limit: number | null
+          used_count: number
+        }
+        Insert: {
+          applicable_categories?: Json | null
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          end_date?: string | null
+          id?: string
+          is_first_order_only?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+        }
+        Update: {
+          applicable_categories?: Json | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string | null
+          id?: string
+          is_first_order_only?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+        }
+        Relationships: []
+      }
+      deals: {
+        Row: {
+          category: string
+          count_stock: boolean
+          created_at: string
+          discount_percent: number | null
+          end_date: string | null
+          end_time: string | null
+          id: string
+          image_url: string | null
+          items: Json
+          name: string
+          offer_price: number | null
+          price: number
+          pricing_mode: string
+          start_date: string | null
+          start_time: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          count_stock?: boolean
+          created_at?: string
+          discount_percent?: number | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          image_url?: string | null
+          items?: Json
+          name: string
+          offer_price?: number | null
+          price: number
+          pricing_mode?: string
+          start_date?: string | null
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          count_stock?: boolean
+          created_at?: string
+          discount_percent?: number | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          image_url?: string | null
+          items?: Json
+          name?: string
+          offer_price?: number | null
+          price?: number
+          pricing_mode?: string
+          start_date?: string | null
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          name: string
+          price: number
+          stock_quantity: number | null
+          updated_at: string
+          variants: Json | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          name: string
+          price: number
+          stock_quantity?: number | null
+          updated_at?: string
+          variants?: Json | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          name?: string
+          price?: number
+          stock_quantity?: number | null
+          updated_at?: string
+          variants?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

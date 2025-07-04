@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Deal } from "@/hooks/useDeals";
+import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 
 interface DealItem {
   id: string;
@@ -40,24 +44,6 @@ interface DealItem {
   price: number;
 }
 
-interface Deal {
-  id?: string;
-  name: string;
-  category: string;
-  image?: string;
-  status: "active" | "draft" | "ended";
-  startDate?: Date;
-  endDate?: Date;
-  startTime?: string;
-  endTime?: string;
-  items: { product: string; quantity: number; variant?: string }[];
-  price: number;
-  offerPrice?: number;
-  pricingMode: "fixed" | "calculated";
-  discountPercent?: number;
-  countStock: boolean;
-}
-
 interface DealModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,25 +51,19 @@ interface DealModalProps {
   onSave: (deal: Deal) => void;
 }
 
-const mockProducts = [
-  { id: "1", name: "Zinger Burger", price: 450, variants: ["Regular", "Spicy"] },
-  { id: "2", name: "Chicken Burger", price: 350, variants: [] },
-  { id: "3", name: "Fries", price: 150, variants: ["Small", "Medium", "Large"] },
-  { id: "4", name: "Drink", price: 120, variants: ["345ml", "500ml", "1.5L"] },
-  { id: "5", name: "Chicken Pieces", price: 800, variants: ["4 pcs", "6 pcs", "8 pcs"] },
-];
-
-const mockCategories = ["Combos", "Family Deals", "Student Deals", "Beverages", "Desserts"];
-
 const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
+  const { data: products = [] } = useProducts();
+  const { data: categories = [] } = useCategories();
+
   const [formData, setFormData] = useState<Deal>({
+    id: "",
     name: "",
     category: "",
     status: "active",
     items: [],
     price: 0,
-    pricingMode: "fixed",
-    countStock: true,
+    pricing_mode: "fixed",
+    count_stock: true,
   });
 
   const [dealItems, setDealItems] = useState<DealItem[]>([]);
@@ -103,33 +83,34 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
         product: item.product,
         quantity: item.quantity,
         variant: item.variant || "",
-        price: mockProducts.find(p => p.name === item.product)?.price || 0,
+        price: products.find(p => p.name === item.product)?.price || 0,
       }));
       setDealItems(convertedItems);
     } else {
       setFormData({
+        id: "",
         name: "",
         category: "",
         status: "active",
         items: [],
         price: 0,
-        pricingMode: "fixed",
-        countStock: true,
+        pricing_mode: "fixed",
+        count_stock: true,
       });
       setDealItems([]);
     }
-  }, [deal, open]);
+  }, [deal, open, products]);
 
   const calculateSubtotal = () => {
     return dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const calculateDisplayPrice = () => {
-    if (formData.pricingMode === "fixed") {
-      return formData.offerPrice || calculateSubtotal();
+    if (formData.pricing_mode === "fixed") {
+      return formData.offer_price || calculateSubtotal();
     } else {
       const subtotal = calculateSubtotal();
-      const discount = (formData.discountPercent || 0) / 100;
+      const discount = (formData.discount_percent || 0) / 100;
       return Math.round(subtotal * (1 - discount));
     }
   };
@@ -140,7 +121,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
       return;
     }
 
-    const product = mockProducts.find(p => p.name === newItem.product);
+    const product = products.find(p => p.name === newItem.product);
     if (!product) return;
 
     const item: DealItem = {
@@ -178,7 +159,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     };
 
     // For fixed pricing, use offer price if provided, otherwise use subtotal
-    if (formData.pricingMode === "fixed") {
+    if (formData.pricing_mode === "fixed") {
       dealData.price = subtotal;
     } else {
       dealData.price = calculateDisplayPrice();
@@ -187,7 +168,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
     onSave(dealData);
   };
 
-  const selectedProduct = mockProducts.find(p => p.name === newItem.product);
+  const selectedProduct = products.find(p => p.name === newItem.product);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -225,9 +206,9 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCategories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -331,8 +312,8 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                     type="radio"
                     id="fixed-price"
                     name="pricing-mode"
-                    checked={formData.pricingMode === "fixed"}
-                    onChange={() => setFormData(prev => ({ ...prev, pricingMode: "fixed" }))}
+                    checked={formData.pricing_mode === "fixed"}
+                    onChange={() => setFormData(prev => ({ ...prev, pricing_mode: "fixed" }))}
                   />
                   <Label htmlFor="fixed-price">Fixed deal price</Label>
                 </div>
@@ -341,14 +322,14 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                     type="radio"
                     id="calculated-price"
                     name="pricing-mode"
-                    checked={formData.pricingMode === "calculated"}
-                    onChange={() => setFormData(prev => ({ ...prev, pricingMode: "calculated" }))}
+                    checked={formData.pricing_mode === "calculated"}
+                    onChange={() => setFormData(prev => ({ ...prev, pricing_mode: "calculated" }))}
                   />
                   <Label htmlFor="calculated-price">Calculated (sum of items − discount)</Label>
                 </div>
               </div>
 
-              {formData.pricingMode === "fixed" ? (
+              {formData.pricing_mode === "fixed" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Regular Price (Auto-calculated)</Label>
@@ -366,8 +347,8 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                     <Input
                       id="offerPrice"
                       type="number"
-                      value={formData.offerPrice || ""}
-                      onChange={(e) => setFormData(prev => ({ ...prev, offerPrice: parseFloat(e.target.value) || undefined }))}
+                      value={formData.offer_price || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, offer_price: parseFloat(e.target.value) || undefined }))}
                       placeholder="Enter discounted price"
                       required
                     />
@@ -382,15 +363,15 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                       type="number"
                       min="0"
                       max="100"
-                      value={formData.discountPercent || ""}
-                      onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
+                      value={formData.discount_percent || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, discount_percent: parseFloat(e.target.value) || 0 }))}
                       placeholder="0"
                     />
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm space-y-1">
                       <div>Subtotal: PKR {calculateSubtotal()}</div>
-                      <div>Discount: {formData.discountPercent || 0}%</div>
+                      <div>Discount: {formData.discount_percent || 0}%</div>
                       <div className="font-semibold">Display Price: PKR {calculateDisplayPrice()}</div>
                     </div>
                   </div>
@@ -408,8 +389,8 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="count-stock"
-                  checked={formData.countStock}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, countStock: checked === true }))}
+                  checked={formData.count_stock}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, count_stock: checked === true }))}
                 />
                 <Label htmlFor="count-stock">Count deal sales against individual item stock</Label>
               </div>
@@ -452,7 +433,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockProducts.map(product => (
+                    {products.map(product => (
                       <SelectItem key={product.id} value={product.name}>
                         {product.name} - PKR {product.price}
                       </SelectItem>
@@ -461,7 +442,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
                 </Select>
               </div>
 
-              {selectedProduct && selectedProduct.variants.length > 0 && (
+              {selectedProduct && selectedProduct.variants && selectedProduct.variants.length > 0 && (
                 <div className="space-y-2">
                   <Label>Variant</Label>
                   <Select value={newItem.variant} onValueChange={(value) => setNewItem(prev => ({ ...prev, variant: value }))}>

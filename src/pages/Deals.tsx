@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Plus, Search, Edit, Copy, Trash2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -32,72 +33,17 @@ import {
 import { toast } from "sonner";
 import colors from "@/theme/colors";
 import DealModal from "@/components/DealModal";
-
-interface Deal {
-  id: string;
-  name: string;
-  price: number;
-  offerPrice?: number;
-  items: { product: string; quantity: number; variant?: string }[];
-  status: "active" | "draft" | "ended";
-  category: string;
-  image?: string;
-  startDate?: Date;
-  endDate?: Date;
-  startTime?: string;
-  endTime?: string;
-  pricingMode: "fixed" | "calculated";
-  discountPercent?: number;
-  countStock: boolean;
-}
-
-const mockDeals: Deal[] = [
-  {
-    id: "1",
-    name: "Zinger Combo Deal",
-    price: 749,
-    offerPrice: 649,
-    items: [
-      { product: "Zinger Burger", quantity: 1 },
-      { product: "Fries", quantity: 1 },
-      { product: "345ml Drink", quantity: 1 }
-    ],
-    status: "active",
-    category: "Combos",
-    pricingMode: "fixed",
-    countStock: true
-  },
-  {
-    id: "2",
-    name: "Family Feast",
-    price: 1999,
-    items: [
-      { product: "Chicken Pieces", quantity: 8 },
-      { product: "Large Fries", quantity: 2 },
-      { product: "1.5L Drink", quantity: 1 }
-    ],
-    status: "active",
-    category: "Family Deals",
-    pricingMode: "fixed",
-    countStock: true
-  },
-  {
-    id: "3",
-    name: "Student Special",
-    price: 399,
-    items: [
-      { product: "Burger", quantity: 1 },
-      { product: "Small Fries", quantity: 1 }
-    ],
-    status: "draft",
-    category: "Student Deals",
-    pricingMode: "fixed",
-    countStock: true
-  }
-];
+import { useDeals, useCreateDeal, useUpdateDeal, useDeleteDeal, useBulkDeleteDeals, Deal } from "@/hooks/useDeals";
+import { useCategories } from "@/hooks/useCategories";
 
 const Deals = () => {
-  const [deals, setDeals] = useState<Deal[]>(mockDeals);
+  const { data: deals = [], isLoading, error } = useDeals();
+  const { data: categories = [] } = useCategories();
+  const createDealMutation = useCreateDeal();
+  const updateDealMutation = useUpdateDeal();
+  const deleteDealMutation = useDeleteDeal();
+  const bulkDeleteMutation = useBulkDeleteDeals();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDeals, setSelectedDeals] = useState<string[]>([]);
@@ -107,13 +53,20 @@ const Deals = () => {
   const [dealToDelete, setDealToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
-  const categories = ["all", "Combos", "Family Deals", "Student Deals", "Beverages", "Desserts"];
+  // Get unique categories from deals and add database categories
+  const dealCategories = ["all", ...new Set(deals.map(deal => deal.category))];
+  const allCategories = [...new Set([...dealCategories, ...categories.map(cat => cat.name)])];
 
   const filteredDeals = deals.filter(deal => {
     const matchesSearch = deal.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || deal.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (error) {
+    console.error("Error loading deals:", error);
+    toast.error("Failed to load deals");
+  }
 
   const handleAddDeal = () => {
     setEditingDeal(null);
@@ -128,10 +81,12 @@ const Deals = () => {
   const handleDuplicateDeal = (deal: Deal) => {
     const duplicatedDeal = {
       ...deal,
-      id: `${Date.now()}`,
       name: `${deal.name} (Copy)`,
       status: "draft" as const
     };
+    delete (duplicatedDeal as any).id;
+    delete (duplicatedDeal as any).created_at;
+    delete (duplicatedDeal as any).updated_at;
     setEditingDeal(duplicatedDeal);
     setIsModalOpen(true);
   };
@@ -143,8 +98,7 @@ const Deals = () => {
 
   const confirmDelete = () => {
     if (dealToDelete) {
-      setDeals(prev => prev.filter(deal => deal.id !== dealToDelete));
-      toast.success("Deal deleted successfully");
+      deleteDealMutation.mutate(dealToDelete);
     }
     setDeleteDialogOpen(false);
     setDealToDelete(null);
@@ -155,8 +109,7 @@ const Deals = () => {
   };
 
   const confirmBulkDelete = () => {
-    setDeals(prev => prev.filter(deal => !selectedDeals.includes(deal.id)));
-    toast.success(`${selectedDeals.length} deals deleted successfully`);
+    bulkDeleteMutation.mutate(selectedDeals);
     setSelectedDeals([]);
     setBulkDeleteDialogOpen(false);
   };
@@ -191,11 +144,11 @@ const Deals = () => {
   };
 
   const getPriceDisplay = (deal: Deal) => {
-    if (deal.offerPrice) {
+    if (deal.offer_price) {
       return (
         <div className="flex flex-col">
           <span className="text-sm line-through text-gray-500">PKR {deal.price}</span>
-          <span className="font-semibold">PKR {deal.offerPrice}</span>
+          <span className="font-semibold">PKR {deal.offer_price}</span>
         </div>
       );
     }
@@ -214,6 +167,31 @@ const Deals = () => {
     );
   };
 
+  const handleSaveDeal = (dealData: Deal) => {
+    if (editingDeal && editingDeal.id) {
+      // Update existing deal
+      updateDealMutation.mutate({ ...dealData, id: editingDeal.id });
+    } else {
+      // Create new deal
+      const { id, created_at, updated_at, ...createData } = dealData;
+      createDealMutation.mutate(createData);
+    }
+    setIsModalOpen(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <AdminSidebar />
+        <div className="flex-1 p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-8">Loading deals...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
@@ -229,6 +207,7 @@ const Deals = () => {
             <Button 
               onClick={handleAddDeal}
               className="bg-orange-500 hover:bg-orange-600"
+              disabled={createDealMutation.isPending}
             >
               <Plus className="h-4 w-4 mr-2" />
               New Deal
@@ -253,7 +232,7 @@ const Deals = () => {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map(category => (
+                    {allCategories.map(category => (
                       <SelectItem key={category} value={category}>
                         {category === "all" ? "All Categories" : category}
                       </SelectItem>
@@ -264,6 +243,7 @@ const Deals = () => {
                   <Button 
                     variant="destructive" 
                     onClick={handleBulkDelete}
+                    disabled={bulkDeleteMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete ({selectedDeals.length})
@@ -335,6 +315,7 @@ const Deals = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteDeal(deal.id)}
+                            disabled={deleteDealMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -361,21 +342,7 @@ const Deals = () => {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         deal={editingDeal}
-        onSave={(dealData) => {
-          if (editingDeal && editingDeal.id) {
-            // Update existing deal
-            setDeals(prev => prev.map(deal => 
-              deal.id === editingDeal.id ? { ...dealData, id: editingDeal.id } : deal
-            ));
-            toast.success("Deal updated successfully");
-          } else {
-            // Add new deal
-            const newDeal = { ...dealData, id: `${Date.now()}` };
-            setDeals(prev => [...prev, newDeal]);
-            toast.success("Deal created successfully");
-          }
-          setIsModalOpen(false);
-        }}
+        onSave={handleSaveDeal}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -391,7 +358,11 @@ const Deals = () => {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteDealMutation.isPending}
+            >
               Delete
             </Button>
           </DialogFooter>
@@ -411,7 +382,11 @@ const Deals = () => {
             <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmBulkDelete}>
+            <Button 
+              variant="destructive" 
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
               Delete All
             </Button>
           </DialogFooter>
