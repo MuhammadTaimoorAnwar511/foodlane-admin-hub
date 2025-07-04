@@ -21,21 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-interface Coupon {
-  id?: string;
-  code: string;
-  name: string;
-  discountType: "percentage" | "fixed";
-  discountValue: number;
-  minOrderAmount?: number;
-  maxUses?: number;
-  usedCount: number;
-  status: "active" | "inactive" | "expired";
-  startDate?: Date;
-  endDate?: Date;
-  createdAt: Date;
-}
+import { Coupon } from "@/hooks/useCoupons";
 
 interface CouponModalProps {
   open: boolean;
@@ -46,13 +32,14 @@ interface CouponModalProps {
 
 const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) => {
   const [formData, setFormData] = useState<Coupon>({
+    id: "",
     code: "",
     name: "",
-    discountType: "percentage",
-    discountValue: 0,
-    usedCount: 0,
+    discount_type: "percentage",
+    discount_value: 0,
+    used_count: 0,
     status: "active",
-    createdAt: new Date(),
+    is_first_order_only: false,
   });
 
   const [hasExpiry, setHasExpiry] = useState(false);
@@ -62,18 +49,19 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
   useEffect(() => {
     if (coupon) {
       setFormData(coupon);
-      setHasExpiry(!!coupon.endDate);
-      setHasUsageLimit(!!coupon.maxUses);
-      setHasMinOrder(!!coupon.minOrderAmount);
+      setHasExpiry(!!coupon.end_date);
+      setHasUsageLimit(!!coupon.usage_limit);
+      setHasMinOrder(!!coupon.min_order_amount);
     } else {
       setFormData({
+        id: "",
         code: "",
         name: "",
-        discountType: "percentage",
-        discountValue: 0,
-        usedCount: 0,
+        discount_type: "percentage",
+        discount_value: 0,
+        used_count: 0,
         status: "active",
-        createdAt: new Date(),
+        is_first_order_only: false,
       });
       setHasExpiry(false);
       setHasUsageLimit(false);
@@ -91,21 +79,21 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
   };
 
   const handleSave = () => {
-    if (!formData.code || !formData.name || !formData.discountValue) {
+    if (!formData.code || !formData.name || !formData.discount_value) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (formData.discountType === "percentage" && formData.discountValue > 100) {
+    if (formData.discount_type === "percentage" && formData.discount_value > 100) {
       toast.error("Percentage discount cannot exceed 100%");
       return;
     }
 
     const couponData: Coupon = {
       ...formData,
-      minOrderAmount: hasMinOrder ? formData.minOrderAmount : undefined,
-      maxUses: hasUsageLimit ? formData.maxUses : undefined,
-      endDate: hasExpiry ? formData.endDate : undefined,
+      min_order_amount: hasMinOrder ? formData.min_order_amount : undefined,
+      usage_limit: hasUsageLimit ? formData.usage_limit : undefined,
+      end_date: hasExpiry ? formData.end_date : undefined,
     };
 
     onSave(couponData);
@@ -179,9 +167,9 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               <div className="space-y-2">
                 <Label>Discount Type</Label>
                 <Select 
-                  value={formData.discountType} 
-                  onValueChange={(value: "percentage" | "fixed") => 
-                    setFormData(prev => ({ ...prev, discountType: value }))
+                  value={formData.discount_type} 
+                  onValueChange={(value: "percentage" | "fixed_amount" | "free_delivery") => 
+                    setFormData(prev => ({ ...prev, discount_type: value }))
                   }
                 >
                   <SelectTrigger>
@@ -194,10 +182,16 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
                         Percentage (%)
                       </div>
                     </SelectItem>
-                    <SelectItem value="fixed">
+                    <SelectItem value="fixed_amount">
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
                         Fixed Amount (PKR)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="free_delivery">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Free Delivery
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -205,18 +199,19 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="discountValue">
+                <Label htmlFor="discount_value">
                   Discount Value * 
-                  {formData.discountType === "percentage" ? " (%)" : " (PKR)"}
+                  {formData.discount_type === "percentage" ? " (%)" : formData.discount_type === "fixed_amount" ? " (PKR)" : ""}
                 </Label>
                 <Input
-                  id="discountValue"
+                  id="discount_value"
                   type="number"
                   min="0"
-                  max={formData.discountType === "percentage" ? "100" : undefined}
-                  value={formData.discountValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, discountValue: parseFloat(e.target.value) || 0 }))}
-                  placeholder={formData.discountType === "percentage" ? "20" : "100"}
+                  max={formData.discount_type === "percentage" ? "100" : undefined}
+                  value={formData.discount_value}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discount_value: parseFloat(e.target.value) || 0 }))}
+                  placeholder={formData.discount_type === "percentage" ? "20" : "100"}
+                  disabled={formData.discount_type === "free_delivery"}
                 />
               </div>
             </CardContent>
@@ -238,13 +233,13 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               </div>
               {hasMinOrder && (
                 <div className="ml-6 space-y-2">
-                  <Label htmlFor="minOrderAmount">Minimum Order Amount (PKR)</Label>
+                  <Label htmlFor="min_order_amount">Minimum Order Amount (PKR)</Label>
                   <Input
-                    id="minOrderAmount"
+                    id="min_order_amount"
                     type="number"
                     min="0"
-                    value={formData.minOrderAmount || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, minOrderAmount: parseFloat(e.target.value) || undefined }))}
+                    value={formData.min_order_amount || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, min_order_amount: parseFloat(e.target.value) || undefined }))}
                     placeholder="500"
                   />
                 </div>
@@ -260,13 +255,13 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               </div>
               {hasUsageLimit && (
                 <div className="ml-6 space-y-2">
-                  <Label htmlFor="maxUses">Maximum Uses</Label>
+                  <Label htmlFor="usage_limit">Maximum Uses</Label>
                   <Input
-                    id="maxUses"
+                    id="usage_limit"
                     type="number"
                     min="1"
-                    value={formData.maxUses || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, maxUses: parseInt(e.target.value) || undefined }))}
+                    value={formData.usage_limit || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, usage_limit: parseInt(e.target.value) || undefined }))}
                     placeholder="100"
                   />
                 </div>
@@ -283,25 +278,36 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               {hasExpiry && (
                 <div className="ml-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date</Label>
+                    <Label htmlFor="start_date">Start Date</Label>
                     <Input
-                      id="startDate"
+                      id="start_date"
                       type="date"
-                      value={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ""}
-                      onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : undefined }))}
+                      value={formData.start_date || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value || undefined }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date</Label>
+                    <Label htmlFor="end_date">End Date</Label>
                     <Input
-                      id="endDate"
+                      id="end_date"
                       type="date"
-                      value={formData.endDate ? formData.endDate.toISOString().split('T')[0] : ""}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : undefined }))}
+                      value={formData.end_date || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value || undefined }))}
                     />
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_first_order_only"
+                  checked={formData.is_first_order_only}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, is_first_order_only: checked }))
+                  }
+                />
+                <Label htmlFor="is_first_order_only">First order only</Label>
+              </div>
             </CardContent>
           </Card>
         </div>
