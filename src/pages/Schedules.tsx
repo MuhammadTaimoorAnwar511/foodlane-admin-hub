@@ -11,6 +11,7 @@ import GlobalShopStatus from "@/components/GlobalShopStatus";
 import DaySchedule from "@/components/DaySchedule";
 import ScheduleOverview from "@/components/ScheduleOverview";
 import colors from "@/theme/colors";
+import { useSchedules, useUpdateSchedule, useGlobalShopStatus, useUpdateGlobalShopStatus, Schedule } from "@/hooks/useSchedules";
 
 interface TimeBlockData {
   id: string;
@@ -34,6 +35,11 @@ const Schedules = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  const { data: schedules = [], isLoading: schedulesLoading } = useSchedules();
+  const { data: globalStatus, isLoading: statusLoading } = useGlobalShopStatus();
+  const updateScheduleMutation = useUpdateSchedule();
+  const updateGlobalStatusMutation = useUpdateGlobalShopStatus();
+  
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("adminLoggedIn");
     if (!isLoggedIn) {
@@ -41,30 +47,28 @@ const Schedules = () => {
     }
   }, [navigate]);
 
-  const [schedules, setSchedules] = useState<DayScheduleData[]>(() => {
-    const saved = localStorage.getItem("shopSchedules");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return DAYS.map(day => ({
-      day,
-      isClosed: false,
-      is24h: false,
-      timeBlocks: [{ id: `${day}-1`, startTime: "09:00", endTime: "21:00" }]
-    }));
-  });
-
-  const [globalStatus, setGlobalStatus] = useState(() => {
-    const saved = localStorage.getItem("globalShopStatus");
-    return saved ? JSON.parse(saved) : {
-      isOpen: true,
-      closedMessage: "We're temporarily closed. Please check back later!"
-    };
-  });
-
+  // Convert backend schedules to frontend format
+  const [frontendSchedules, setFrontendSchedules] = useState<DayScheduleData[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  // Determine active tab based on URL
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const converted = DAYS.map((day, index) => {
+        // Map Monday=0 to day_of_week where Monday=1, Sunday=0
+        const dayOfWeek = index === 6 ? 0 : index + 1;
+        const schedule = schedules.find(s => s.day_of_week === dayOfWeek);
+        
+        return {
+          day,
+          isClosed: schedule?.is_closed || false,
+          is24h: schedule?.is_24h || false,
+          timeBlocks: schedule?.time_blocks || [{ id: `${day}-1`, startTime: "09:00", endTime: "21:00" }]
+        };
+      });
+      setFrontendSchedules(converted);
+    }
+  }, [schedules]);
+
   const getActiveTab = () => {
     if (location.pathname.includes('/overview')) return 'overview';
     if (location.pathname.includes('/edit')) return 'editor';
@@ -79,20 +83,16 @@ const Schedules = () => {
     }
   };
 
-  useEffect(() => {
-    localStorage.setItem("shopSchedules", JSON.stringify(schedules));
-  }, [schedules]);
-
   const updateDaySchedule = (dayIndex: number, updates: Partial<DayScheduleData>) => {
-    setSchedules(prev => prev.map((schedule, index) => 
+    setFrontendSchedules(prev => prev.map((schedule, index) => 
       index === dayIndex ? { ...schedule, ...updates } : schedule
     ));
   };
 
   const validateSchedules = () => {
-    const warnings = [];
+    const warnings: string[] = [];
     
-    schedules.forEach((schedule, index) => {
+    frontendSchedules.forEach((schedule, index) => {
       if (!schedule.isClosed && !schedule.is24h && schedule.timeBlocks.length === 0) {
         warnings.push(`${schedule.day}: No time blocks defined`);
       }
@@ -104,17 +104,13 @@ const Schedules = () => {
         if (start >= end) {
           warnings.push(`${schedule.day}: Block ${blockIndex + 1} has invalid time range`);
         }
-        
-        if (start > "22:00" && end < "06:00") {
-          warnings.push(`${schedule.day}: Block ${blockIndex + 1} spans overnight`);
-        }
       });
     });
     
     return warnings;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const warnings = validateSchedules();
     
     if (warnings.length > 0) {
@@ -124,8 +120,23 @@ const Schedules = () => {
       return;
     }
     
-    localStorage.setItem("shopSchedules", JSON.stringify(schedules));
-    localStorage.setItem("globalShopStatus", JSON.stringify(globalStatus));
+    // Save each schedule to backend
+    for (let i = 0; i < frontendSchedules.length; i++) {
+      const frontendSchedule = frontendSchedules[i];
+      // Map frontend day index to backend day_of_week
+      const dayOfWeek = i === 6 ? 0 : i + 1; // Sunday=0, Monday=1, etc.
+      const backendSchedule = schedules.find(s => s.day_of_week === dayOfWeek);
+      
+      if (backendSchedule) {
+        await updateScheduleMutation.mutateAsync({
+          id: backendSchedule.id,
+          is_closed: frontendSchedule.isClosed,
+          is_24h: frontendSchedule.is24h,
+          time_blocks: frontendSchedule.timeBlocks
+        });
+      }
+    }
+    
     toast.success("Shop schedule saved successfully!");
   };
 
@@ -133,7 +144,6 @@ const Schedules = () => {
     setSelectedDay(dayIndex);
     navigate('/admin/schedules/edit');
     
-    // Wait for navigation then scroll
     setTimeout(() => {
       const element = document.getElementById(`day-schedule-${dayIndex}`);
       if (element) {
@@ -146,6 +156,17 @@ const Schedules = () => {
     }, 100);
   };
 
+  if (schedulesLoading || statusLoading) {
+    return (
+      <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
+        <AdminSidebar />
+        <div className="flex-1 p-6">
+          <div className="text-center py-8">Loading schedules...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
@@ -157,10 +178,12 @@ const Schedules = () => {
         </div>
 
         <div className="space-y-4 md:space-y-6">
-          <GlobalShopStatus 
-            status={globalStatus}
-            onStatusChange={setGlobalStatus}
-          />
+          {globalStatus && (
+            <GlobalShopStatus 
+              status={globalStatus}
+              onStatusChange={(newStatus) => updateGlobalStatusMutation.mutate(newStatus)}
+            />
+          )}
           
           <div className="w-full">
             <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="w-full">
@@ -179,7 +202,7 @@ const Schedules = () => {
               
               <TabsContent value="overview" className="mt-0">
                 <ScheduleOverview 
-                  schedules={schedules}
+                  schedules={frontendSchedules}
                   onEditDay={scrollToDay}
                 />
               </TabsContent>
@@ -194,7 +217,7 @@ const Schedules = () => {
                   </CardHeader>
                   <CardContent className="p-4 md:p-6 pt-0">
                     <div className="space-y-3 md:space-y-4">
-                      {schedules.map((schedule, index) => (
+                      {frontendSchedules.map((schedule, index) => (
                         <div 
                           key={schedule.day}
                           id={`day-schedule-${index}`}
@@ -228,6 +251,7 @@ const Schedules = () => {
                       onClick={handleSave}
                       style={{ backgroundColor: colors.primary[500] }}
                       className="w-full h-10 md:h-11 text-sm md:text-base mt-4"
+                      disabled={updateScheduleMutation.isPending}
                     >
                       Save Schedule
                     </Button>

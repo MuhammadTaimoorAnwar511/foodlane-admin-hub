@@ -209,6 +209,69 @@ export type Database = {
           },
         ]
       }
+      riders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          orders_completed: number
+          password: string
+          phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          orders_completed?: number
+          password: string
+          phone: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          orders_completed?: number
+          password?: string
+          phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          is_24h: boolean
+          is_closed: boolean
+          time_blocks: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_24h?: boolean
+          is_closed?: boolean
+          time_blocks?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_24h?: boolean
+          is_closed?: boolean
+          time_blocks?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shop_settings: {
         Row: {
           created_at: string

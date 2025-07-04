@@ -11,38 +11,17 @@ import { Plus, Edit, Trash2, User, Phone } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
 import colors from "@/theme/colors";
+import { useRiders, useCreateRider, useUpdateRider, useDeleteRider, Rider } from "@/hooks/useRiders";
 
 const Riders = () => {
   const navigate = useNavigate();
-  const [riders, setRiders] = useState([
-    {
-      id: 1,
-      name: "Alex Rodriguez",
-      phone: "+923001234567",
-      password: "rider123",
-      status: "active",
-      ordersCompleted: 145
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      phone: "+923001234568",
-      password: "rider456",
-      status: "active",
-      ordersCompleted: 98
-    },
-    {
-      id: 3,
-      name: "Mike Chen",
-      phone: "+923001234569",
-      password: "rider789",
-      status: "offline",
-      ordersCompleted: 67
-    }
-  ]);
+  const { data: riders = [], isLoading, error } = useRiders();
+  const createRiderMutation = useCreateRider();
+  const updateRiderMutation = useUpdateRider();
+  const deleteRiderMutation = useDeleteRider();
 
   const [showDialog, setShowDialog] = useState(false);
-  const [editingRider, setEditingRider] = useState(null);
+  const [editingRider, setEditingRider] = useState<Rider | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -56,10 +35,14 @@ const Riders = () => {
     }
   }, [navigate]);
 
+  if (error) {
+    console.error("Error loading riders:", error);
+    toast.error("Failed to load riders");
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Enhanced validation for required fields
     if (!formData.name.trim()) {
       toast.error("Full name is required");
       return;
@@ -75,19 +58,16 @@ const Riders = () => {
       return;
     }
     
-    const newRider = {
-      id: editingRider ? editingRider.id : Date.now(),
+    const riderData = {
       ...formData,
-      status: editingRider ? editingRider.status : "active",
-      ordersCompleted: editingRider ? editingRider.ordersCompleted : 0
+      status: editingRider ? editingRider.status : ("active" as const),
+      orders_completed: editingRider ? editingRider.orders_completed : 0
     };
 
     if (editingRider) {
-      setRiders(riders.map(r => r.id === editingRider.id ? newRider : r));
-      toast.success("Rider updated successfully!");
+      updateRiderMutation.mutate({ ...riderData, id: editingRider.id });
     } else {
-      setRiders([...riders, newRider]);
-      toast.success("Rider added successfully!");
+      createRiderMutation.mutate(riderData);
     }
 
     setShowDialog(false);
@@ -103,7 +83,7 @@ const Riders = () => {
     setEditingRider(null);
   };
 
-  const handleEdit = (rider: any) => {
+  const handleEdit = (rider: Rider) => {
     setEditingRider(rider);
     setFormData({
       name: rider.name,
@@ -113,9 +93,8 @@ const Riders = () => {
     setShowDialog(true);
   };
 
-  const handleDelete = (id: number) => {
-    setRiders(riders.filter(r => r.id !== id));
-    toast.success("Rider deleted successfully!");
+  const handleDelete = (id: string) => {
+    deleteRiderMutation.mutate(id);
   };
 
   const getStatusColor = (status: string) => {
@@ -124,10 +103,23 @@ const Riders = () => {
         return 'bg-green-100 text-green-800';
       case 'offline':
         return 'bg-red-100 text-red-800';
+      case 'busy':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
+        <AdminSidebar />
+        <div className="flex-1 p-6">
+          <div className="text-center py-8">Loading riders...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
@@ -142,7 +134,12 @@ const Riders = () => {
           
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
-              <Button style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90" onClick={resetForm}>
+              <Button 
+                style={{ backgroundColor: colors.primary[500] }} 
+                className="hover:opacity-90" 
+                onClick={resetForm}
+                disabled={createRiderMutation.isPending}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Rider
               </Button>
@@ -195,7 +192,12 @@ const Riders = () => {
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90">
+                  <Button 
+                    type="submit" 
+                    style={{ backgroundColor: colors.primary[500] }} 
+                    className="hover:opacity-90"
+                    disabled={createRiderMutation.isPending || updateRiderMutation.isPending}
+                  >
                     {editingRider ? "Update" : "Add"} Rider
                   </Button>
                 </div>
@@ -232,7 +234,7 @@ const Riders = () => {
                 </div>
 
                 <div className="text-center mb-4">
-                  <p className="text-2xl font-bold" style={{ color: colors.primary[500] }}>{rider.ordersCompleted}</p>
+                  <p className="text-2xl font-bold" style={{ color: colors.primary[500] }}>{rider.orders_completed}</p>
                   <p className="text-xs text-gray-600">Orders Completed</p>
                 </div>
 
@@ -248,6 +250,7 @@ const Riders = () => {
                     variant="outline"
                     onClick={() => handleEdit(rider)}
                     className="flex-1"
+                    disabled={updateRiderMutation.isPending}
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit
@@ -257,6 +260,7 @@ const Riders = () => {
                     variant="destructive"
                     onClick={() => handleDelete(rider.id)}
                     className="flex-1"
+                    disabled={deleteRiderMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
                     Delete
@@ -266,6 +270,12 @@ const Riders = () => {
             </Card>
           ))}
         </div>
+
+        {riders.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No riders found. Add your first delivery rider to get started.
+          </div>
+        )}
       </main>
     </div>
   );
