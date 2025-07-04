@@ -4,15 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Bike, User } from "lucide-react";
+import { Bike, User, Gift } from "lucide-react";
 import colors from "@/theme/colors";
 
 const DeliverySettings = () => {
   const [settings, setSettings] = useState({
     minDeliveryTime: 25,
     maxDeliveryTime: 30,
-    deliveryCharges: 150
+    deliveryCharges: 150,
+    freeDeliveryEnabled: false,
+    freeDeliveryThreshold: 1000
   });
 
   const handleSave = () => {
@@ -82,6 +85,39 @@ const DeliverySettings = () => {
               required
             />
           </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Gift className="h-5 w-5 text-orange-500" />
+            <h3 className="font-medium text-gray-900">Free Delivery</h3>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="freeDeliveryEnabled"
+              checked={settings.freeDeliveryEnabled}
+              onCheckedChange={(checked) => setSettings({...settings, freeDeliveryEnabled: checked})}
+            />
+            <Label htmlFor="freeDeliveryEnabled">Enable free delivery for orders above threshold</Label>
+          </div>
+
+          {settings.freeDeliveryEnabled && (
+            <div className="ml-6 space-y-2">
+              <Label htmlFor="freeDeliveryThreshold">Free Delivery Threshold (PKR)</Label>
+              <Input
+                id="freeDeliveryThreshold"
+                type="number"
+                min="0"
+                value={settings.freeDeliveryThreshold}
+                onChange={(e) => setSettings({...settings, freeDeliveryThreshold: parseInt(e.target.value)})}
+                placeholder="1000"
+              />
+              <p className="text-sm text-gray-500">
+                Orders above PKR {settings.freeDeliveryThreshold} will have free delivery
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex space-x-2">

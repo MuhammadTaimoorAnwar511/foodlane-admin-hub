@@ -126,7 +126,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
 
   const calculateDisplayPrice = () => {
     if (formData.pricingMode === "fixed") {
-      return formData.offerPrice || formData.price;
+      return formData.offerPrice || calculateSubtotal();
     } else {
       const subtotal = calculateSubtotal();
       const discount = (formData.discountPercent || 0) / 100;
@@ -166,6 +166,7 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
       return;
     }
 
+    const subtotal = calculateSubtotal();
     const dealData: Deal = {
       ...formData,
       items: dealItems.map(item => ({
@@ -173,8 +174,15 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
         quantity: item.quantity,
         variant: item.variant,
       })),
-      price: formData.pricingMode === "calculated" ? calculateDisplayPrice() : formData.price,
+      price: subtotal, // Always set to sum of items
     };
+
+    // For fixed pricing, use offer price if provided, otherwise use subtotal
+    if (formData.pricingMode === "fixed") {
+      dealData.price = subtotal;
+    } else {
+      dealData.price = calculateDisplayPrice();
+    }
 
     onSave(dealData);
   };
@@ -343,23 +351,25 @@ const DealModal = ({ open, onOpenChange, deal, onSave }: DealModalProps) => {
               {formData.pricingMode === "fixed" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Regular Price *</Label>
+                    <Label htmlFor="price">Regular Price (Auto-calculated)</Label>
                     <Input
                       id="price"
                       type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                      placeholder="0"
+                      value={calculateSubtotal()}
+                      disabled
+                      className="bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500">This is automatically calculated from the sum of all items</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="offerPrice">Offer Price (Optional)</Label>
+                    <Label htmlFor="offerPrice">Offer Price *</Label>
                     <Input
                       id="offerPrice"
                       type="number"
                       value={formData.offerPrice || ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, offerPrice: parseFloat(e.target.value) || undefined }))}
-                      placeholder="0"
+                      placeholder="Enter discounted price"
+                      required
                     />
                   </div>
                 </div>
