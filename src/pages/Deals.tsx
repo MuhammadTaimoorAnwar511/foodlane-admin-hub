@@ -47,8 +47,7 @@ interface Deal {
   startTime?: string;
   endTime?: string;
   pricingMode: "fixed" | "calculated";
-  enableAddons: boolean;
-  addons: { id: string; name: string; price: number }[];
+  discountPercent?: number;
   countStock: boolean;
 }
 
@@ -66,8 +65,6 @@ const mockDeals: Deal[] = [
     status: "active",
     category: "Combos",
     pricingMode: "fixed",
-    enableAddons: false,
-    addons: [],
     countStock: true
   },
   {
@@ -82,8 +79,6 @@ const mockDeals: Deal[] = [
     status: "active",
     category: "Family Deals",
     pricingMode: "fixed",
-    enableAddons: false,
-    addons: [],
     countStock: true
   },
   {
@@ -97,8 +92,6 @@ const mockDeals: Deal[] = [
     status: "draft",
     category: "Student Deals",
     pricingMode: "fixed",
-    enableAddons: false,
-    addons: [],
     countStock: true
   }
 ];
