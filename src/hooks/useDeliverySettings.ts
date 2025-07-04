@@ -28,7 +28,7 @@ export const useDeliverySettings = () => {
       }
 
       console.log("Delivery settings fetched:", data);
-      return data.setting_value as DeliverySettings;
+      return data.setting_value as unknown as DeliverySettings;
     },
   });
 };
@@ -41,7 +41,7 @@ export const useUpdateDeliverySettings = () => {
       console.log("Updating delivery settings:", settings);
       const { data, error } = await supabase
         .from("shop_settings")
-        .update({ setting_value: settings })
+        .update({ setting_value: settings as any })
         .eq("setting_key", "delivery_settings")
         .select()
         .single();
