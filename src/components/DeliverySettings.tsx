@@ -17,7 +17,7 @@ const DeliverySettings = () => {
     minDeliveryTime: 25,
     maxDeliveryTime: 30,
     deliveryCharges: 150,
-    freeDeliveryEnabled: false,
+    enableFreeDelivery: false,
     freeDeliveryThreshold: 1000
   });
 
@@ -25,36 +25,38 @@ const DeliverySettings = () => {
   useEffect(() => {
     if (deliverySettings) {
       setSettings({
-        minDeliveryTime: deliverySettings.estimatedDeliveryTime || 25,
-        maxDeliveryTime: (deliverySettings.estimatedDeliveryTime || 25) + 5,
-        deliveryCharges: deliverySettings.deliveryFee || 150,
-        freeDeliveryEnabled: deliverySettings.enableFreeDelivery || false,
+        minDeliveryTime: deliverySettings.minDeliveryTime || 25,
+        maxDeliveryTime: deliverySettings.maxDeliveryTime || 30,
+        deliveryCharges: deliverySettings.deliveryCharges || 150,
+        enableFreeDelivery: deliverySettings.enableFreeDelivery || false,
         freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold || 1000
       });
     }
   }, [deliverySettings]);
 
   const handleSave = () => {
-    const updatedSettings = {
-      deliveryFee: settings.deliveryCharges,
-      freeDeliveryThreshold: settings.freeDeliveryThreshold,
-      deliveryRadius: deliverySettings?.deliveryRadius || 10,
-      estimatedDeliveryTime: settings.minDeliveryTime,
-      enableFreeDelivery: settings.freeDeliveryEnabled
-    };
+    // Validate that max delivery time is greater than min delivery time
+    if (settings.maxDeliveryTime <= settings.minDeliveryTime) {
+      toast.error("Max delivery time must be greater than min delivery time");
+      return;
+    }
 
-    updateDeliverySettings.mutate(updatedSettings);
+    updateDeliverySettings.mutate(settings);
   };
 
-  const handleReset = () => {
-    if (deliverySettings) {
-      setSettings({
-        minDeliveryTime: deliverySettings.estimatedDeliveryTime || 25,
-        maxDeliveryTime: (deliverySettings.estimatedDeliveryTime || 25) + 5,
-        deliveryCharges: deliverySettings.deliveryFee || 150,
-        freeDeliveryEnabled: deliverySettings.enableFreeDelivery || false,
-        freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold || 1000
-      });
+  const handleMinTimeChange = (value: number) => {
+    setSettings(prev => ({
+      ...prev,
+      minDeliveryTime: value,
+      // Auto-adjust max time if it becomes less than or equal to min time
+      maxDeliveryTime: prev.maxDeliveryTime <= value ? value + 5 : prev.maxDeliveryTime
+    }));
+  };
+
+  const handleMaxTimeChange = (value: number) => {
+    // Only allow max time if it's greater than min time
+    if (value > settings.minDeliveryTime) {
+      setSettings(prev => ({ ...prev, maxDeliveryTime: value }));
     }
   };
 
@@ -90,8 +92,9 @@ const DeliverySettings = () => {
               <Input
                 id="minTime"
                 type="number"
+                min="1"
                 value={settings.minDeliveryTime}
-                onChange={(e) => setSettings({...settings, minDeliveryTime: parseInt(e.target.value)})}
+                onChange={(e) => handleMinTimeChange(parseInt(e.target.value) || 1)}
                 required
               />
             </div>
@@ -100,10 +103,16 @@ const DeliverySettings = () => {
               <Input
                 id="maxTime"
                 type="number"
+                min={settings.minDeliveryTime + 1}
                 value={settings.maxDeliveryTime}
-                onChange={(e) => setSettings({...settings, maxDeliveryTime: parseInt(e.target.value)})}
+                onChange={(e) => handleMaxTimeChange(parseInt(e.target.value) || settings.minDeliveryTime + 1)}
                 required
               />
+              {settings.maxDeliveryTime <= settings.minDeliveryTime && (
+                <p className="text-sm text-red-500 mt-1">
+                  Max delivery time must be greater than min delivery time
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -119,8 +128,9 @@ const DeliverySettings = () => {
             <Input
               id="charges"
               type="number"
+              min="0"
               value={settings.deliveryCharges}
-              onChange={(e) => setSettings({...settings, deliveryCharges: parseInt(e.target.value)})}
+              onChange={(e) => setSettings({...settings, deliveryCharges: parseInt(e.target.value) || 0})}
               required
             />
           </div>
@@ -134,14 +144,14 @@ const DeliverySettings = () => {
           
           <div className="flex items-center space-x-2">
             <Switch
-              id="freeDeliveryEnabled"
-              checked={settings.freeDeliveryEnabled}
-              onCheckedChange={(checked) => setSettings({...settings, freeDeliveryEnabled: checked})}
+              id="enableFreeDelivery"
+              checked={settings.enableFreeDelivery}
+              onCheckedChange={(checked) => setSettings({...settings, enableFreeDelivery: checked})}
             />
-            <Label htmlFor="freeDeliveryEnabled">Enable free delivery for orders above threshold</Label>
+            <Label htmlFor="enableFreeDelivery">Enable free delivery for orders above threshold</Label>
           </div>
 
-          {settings.freeDeliveryEnabled && (
+          {settings.enableFreeDelivery && (
             <div className="ml-6 space-y-2">
               <Label htmlFor="freeDeliveryThreshold">Free Delivery Threshold (PKR)</Label>
               <Input
@@ -149,7 +159,7 @@ const DeliverySettings = () => {
                 type="number"
                 min="0"
                 value={settings.freeDeliveryThreshold}
-                onChange={(e) => setSettings({...settings, freeDeliveryThreshold: parseInt(e.target.value)})}
+                onChange={(e) => setSettings({...settings, freeDeliveryThreshold: parseInt(e.target.value) || 0})}
                 placeholder="1000"
               />
               <p className="text-sm text-gray-500">
@@ -163,7 +173,7 @@ const DeliverySettings = () => {
           <Button 
             onClick={handleSave} 
             style={{ backgroundColor: colors.primary[500] }}
-            disabled={updateDeliverySettings.isPending}
+            disabled={updateDeliverySettings.isPending || settings.maxDeliveryTime <= settings.minDeliveryTime}
           >
             {updateDeliverySettings.isPending ? (
               <>
@@ -173,9 +183,6 @@ const DeliverySettings = () => {
             ) : (
               'Save Settings'
             )}
-          </Button>
-          <Button onClick={handleReset} variant="outline">
-            Reset
           </Button>
         </div>
       </CardContent>

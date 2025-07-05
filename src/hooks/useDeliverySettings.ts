@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface DeliverySettings {
-  deliveryFee: number;
-  freeDeliveryThreshold: number;
-  deliveryRadius: number;
-  estimatedDeliveryTime: number;
+  minDeliveryTime: number;
+  maxDeliveryTime: number;
+  deliveryCharges: number;
   enableFreeDelivery: boolean;
+  freeDeliveryThreshold: number;
 }
 
 export const useDeliverySettings = () => {
@@ -31,11 +31,11 @@ export const useDeliverySettings = () => {
       if (!data) {
         console.log("No delivery settings found, returning defaults");
         const defaultSettings: DeliverySettings = {
-          deliveryFee: 150,
-          freeDeliveryThreshold: 1000,
-          deliveryRadius: 10,
-          estimatedDeliveryTime: 25,
-          enableFreeDelivery: false
+          minDeliveryTime: 25,
+          maxDeliveryTime: 30,
+          deliveryCharges: 150,
+          enableFreeDelivery: false,
+          freeDeliveryThreshold: 1000
         };
         return defaultSettings;
       }
@@ -52,6 +52,11 @@ export const useUpdateDeliverySettings = () => {
   return useMutation({
     mutationFn: async (settings: DeliverySettings) => {
       console.log("Updating delivery settings:", settings);
+      
+      // Validation: max delivery time must be greater than min delivery time
+      if (settings.maxDeliveryTime <= settings.minDeliveryTime) {
+        throw new Error("Max delivery time must be greater than min delivery time");
+      }
       
       // First check if settings exist
       const { data: existingData } = await supabase
@@ -102,7 +107,7 @@ export const useUpdateDeliverySettings = () => {
     },
     onError: (error) => {
       console.error("Failed to update delivery settings:", error);
-      toast.error("Failed to update delivery settings");
+      toast.error(error.message || "Failed to update delivery settings");
     },
   });
 };
