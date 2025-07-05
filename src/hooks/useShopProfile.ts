@@ -9,6 +9,12 @@ export interface ShopProfile {
   address: string;
   phone: string;
   email: string;
+  website?: string;
+  social_links?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
 }
 
 export const useShopProfile = () => {
@@ -20,7 +26,7 @@ export const useShopProfile = () => {
         .from("shop_settings")
         .select("setting_value")
         .eq("setting_key", "shop_profile")
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching shop profile:", error);
@@ -28,6 +34,20 @@ export const useShopProfile = () => {
       }
 
       console.log("Shop profile fetched:", data);
+      
+      // Return the setting_value as ShopProfile, or default values if not found
+      if (!data) {
+        return {
+          name: "FastFood Delight",
+          description: "We serve the best fast food in town with fresh ingredients and quick delivery.",
+          address: "123 Main Street, City Center",
+          phone: "+1234567890",
+          email: "info@fastfooddelight.com",
+          website: "",
+          social_links: {}
+        } as ShopProfile;
+      }
+      
       return data.setting_value as ShopProfile;
     },
   });
@@ -39,20 +59,44 @@ export const useUpdateShopProfile = () => {
   return useMutation({
     mutationFn: async (profileData: ShopProfile) => {
       console.log("Updating shop profile:", profileData);
-      const { data, error } = await supabase
+      
+      // First check if shop_profile setting exists
+      const { data: existingData } = await supabase
         .from("shop_settings")
-        .update({ setting_value: profileData })
+        .select("id")
         .eq("setting_key", "shop_profile")
-        .select()
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error updating shop profile:", error);
-        throw error;
+      let result;
+      
+      if (existingData) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from("shop_settings")
+          .update({ setting_value: profileData })
+          .eq("setting_key", "shop_profile")
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from("shop_settings")
+          .insert({
+            setting_key: "shop_profile",
+            setting_value: profileData
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = data;
       }
 
-      console.log("Shop profile updated:", data);
-      return data;
+      console.log("Shop profile updated:", result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shop_profile"] });

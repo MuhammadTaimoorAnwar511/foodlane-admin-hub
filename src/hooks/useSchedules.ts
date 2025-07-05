@@ -35,7 +35,14 @@ export const useSchedules = () => {
       }
 
       console.log("Schedules fetched:", data);
-      return data as Schedule[];
+      
+      // Convert the Json time_blocks to TimeBlock[] type
+      const schedules = data.map(schedule => ({
+        ...schedule,
+        time_blocks: (schedule.time_blocks as TimeBlock[]) || []
+      }));
+      
+      return schedules as Schedule[];
     },
   });
 };
@@ -46,9 +53,16 @@ export const useUpdateSchedule = () => {
   return useMutation({
     mutationFn: async ({ id, ...scheduleData }: Partial<Schedule> & { id: string }) => {
       console.log("Updating schedule:", id, scheduleData);
+      
+      // Convert TimeBlock[] to Json for database storage
+      const updateData = {
+        ...scheduleData,
+        time_blocks: scheduleData.time_blocks || []
+      };
+      
       const { data, error } = await supabase
         .from("schedules")
-        .update(scheduleData)
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
