@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,11 +109,6 @@ const DeliverySettings = () => {
                 onChange={(e) => handleMaxTimeChange(parseInt(e.target.value) || settings.minDeliveryTime + 1)}
                 required
               />
-              {settings.maxDeliveryTime <= settings.minDeliveryTime && (
-                <p className="text-sm text-red-500 mt-1">
-                  Max delivery time must be greater than min delivery time
-                </p>
-              )}
             </div>
           </div>
         </div>
