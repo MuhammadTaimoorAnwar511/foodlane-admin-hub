@@ -39,6 +39,41 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_numbers: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string | null
+          number: string
+          profile_id: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          number: string
+          profile_id?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          number?: string
+          profile_id?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_numbers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "shop_profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           applicable_categories: Json | null
@@ -159,6 +194,44 @@ export type Database = {
         }
         Relationships: []
       }
+      locations: {
+        Row: {
+          address: string
+          created_at: string | null
+          google_maps_url: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          profile_id: string | null
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          google_maps_url?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          profile_id?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          google_maps_url?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "shop_profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null
@@ -272,6 +345,36 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_profile: {
+        Row: {
+          about_desc: string | null
+          created_at: string | null
+          id: string
+          shop_name: string
+          short_desc: string | null
+          tagline: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          about_desc?: string | null
+          created_at?: string | null
+          id?: string
+          shop_name: string
+          short_desc?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          about_desc?: string | null
+          created_at?: string | null
+          id?: string
+          shop_name?: string
+          short_desc?: string | null
+          tagline?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       shop_settings: {
         Row: {
           created_at: string
@@ -295,6 +398,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      social_links: {
+        Row: {
+          created_at: string | null
+          id: string
+          platform: string
+          profile_id: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          platform: string
+          profile_id?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          platform?: string
+          profile_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_links_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "shop_profile"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

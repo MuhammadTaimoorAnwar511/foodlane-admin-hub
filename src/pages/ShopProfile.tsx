@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "@/components/AdminSidebar";
-import ShopProfileForm from "@/components/ShopProfileForm";
+import CompleteShopProfileForm from "@/components/CompleteShopProfileForm";
 import colors from "@/theme/colors";
 
 const ShopProfile = () => {
@@ -22,10 +22,10 @@ const ShopProfile = () => {
       <main className="flex-1 p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Shop Profile</h1>
-          <p className="text-gray-600">Manage your restaurant's public information</p>
+          <p className="text-gray-600">Manage your restaurant's complete profile information</p>
         </div>
 
-        <ShopProfileForm />
+        <CompleteShopProfileForm />
       </main>
     </div>
   );
