@@ -39,7 +39,7 @@ export const useSchedules = () => {
       // Convert the Json time_blocks to TimeBlock[] type
       const schedules = data.map(schedule => ({
         ...schedule,
-        time_blocks: (schedule.time_blocks as TimeBlock[]) || []
+        time_blocks: (schedule.time_blocks as unknown as TimeBlock[]) || []
       }));
       
       return schedules as Schedule[];
@@ -57,7 +57,7 @@ export const useUpdateSchedule = () => {
       // Convert TimeBlock[] to Json for database storage
       const updateData = {
         ...scheduleData,
-        time_blocks: scheduleData.time_blocks || []
+        time_blocks: (scheduleData.time_blocks || []) as unknown as any
       };
       
       const { data, error } = await supabase
@@ -116,7 +116,7 @@ export const useUpdateGlobalShopStatus = () => {
       console.log("Updating global shop status:", statusData);
       const { data, error } = await supabase
         .from("shop_settings")
-        .update({ setting_value: statusData })
+        .update({ setting_value: statusData as unknown as any })
         .eq("setting_key", "global_shop_status")
         .select()
         .single();

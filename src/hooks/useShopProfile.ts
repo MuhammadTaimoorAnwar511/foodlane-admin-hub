@@ -48,7 +48,7 @@ export const useShopProfile = () => {
         } as ShopProfile;
       }
       
-      return data.setting_value as ShopProfile;
+      return data.setting_value as unknown as ShopProfile;
     },
   });
 };
@@ -73,7 +73,7 @@ export const useUpdateShopProfile = () => {
         // Update existing record
         const { data, error } = await supabase
           .from("shop_settings")
-          .update({ setting_value: profileData })
+          .update({ setting_value: profileData as unknown as any })
           .eq("setting_key", "shop_profile")
           .select()
           .single();
@@ -86,7 +86,7 @@ export const useUpdateShopProfile = () => {
           .from("shop_settings")
           .insert({
             setting_key: "shop_profile",
-            setting_value: profileData
+            setting_value: profileData as unknown as any
           })
           .select()
           .single();
