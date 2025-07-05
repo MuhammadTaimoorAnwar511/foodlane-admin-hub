@@ -20,11 +20,24 @@ export const useDeliverySettings = () => {
         .from("shop_settings")
         .select("setting_value")
         .eq("setting_key", "delivery_settings")
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching delivery settings:", error);
         throw error;
+      }
+
+      // If no settings exist, return default values
+      if (!data) {
+        console.log("No delivery settings found, returning defaults");
+        const defaultSettings: DeliverySettings = {
+          deliveryFee: 150,
+          freeDeliveryThreshold: 1000,
+          deliveryRadius: 10,
+          estimatedDeliveryTime: 25,
+          enableFreeDelivery: false
+        };
+        return defaultSettings;
       }
 
       console.log("Delivery settings fetched:", data);
@@ -39,20 +52,49 @@ export const useUpdateDeliverySettings = () => {
   return useMutation({
     mutationFn: async (settings: DeliverySettings) => {
       console.log("Updating delivery settings:", settings);
-      const { data, error } = await supabase
+      
+      // First check if settings exist
+      const { data: existingData } = await supabase
         .from("shop_settings")
-        .update({ setting_value: settings as any })
+        .select("id")
         .eq("setting_key", "delivery_settings")
-        .select()
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error updating delivery settings:", error);
-        throw error;
+      if (existingData) {
+        // Update existing settings
+        const { data, error } = await supabase
+          .from("shop_settings")
+          .update({ setting_value: settings as unknown as any })
+          .eq("setting_key", "delivery_settings")
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error updating delivery settings:", error);
+          throw error;
+        }
+
+        console.log("Delivery settings updated:", data);
+        return data;
+      } else {
+        // Create new settings
+        const { data, error } = await supabase
+          .from("shop_settings")
+          .insert({
+            setting_key: "delivery_settings",
+            setting_value: settings as unknown as any
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error creating delivery settings:", error);
+          throw error;
+        }
+
+        console.log("Delivery settings created:", data);
+        return data;
       }
-
-      console.log("Delivery settings updated:", data);
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["delivery-settings"] });

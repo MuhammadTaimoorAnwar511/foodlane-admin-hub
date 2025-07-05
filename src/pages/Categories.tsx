@@ -6,21 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, FolderOpen } from "lucide-react";
+import { Plus, Edit, Trash2, FolderOpen, Loader2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
-import { toast } from "sonner";
+import colors from "@/theme/colors";
+import { 
+  useCategoriesWithProducts, 
+  useCreateCategory, 
+  useUpdateCategory, 
+  useDeleteCategory,
+  CategoryWithProductCount 
+} from "@/hooks/useCategoriesWithProducts";
 
 const Categories = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Burgers", description: "Delicious burgers and sandwiches", productCount: 12 },
-    { id: 2, name: "Pizza", description: "Wood-fired pizzas with fresh toppings", productCount: 8 },
-    { id: 3, name: "Chicken", description: "Crispy fried chicken and wings", productCount: 15 },
-    { id: 4, name: "Beverages", description: "Cold drinks and hot beverages", productCount: 20 },
-  ]);
+  const { data: categories, isLoading } = useCategoriesWithProducts();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
 
   const [showDialog, setShowDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryWithProductCount | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: ""
@@ -36,18 +41,17 @@ const Categories = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newCategory = {
-      id: editingCategory ? editingCategory.id : Date.now(),
-      ...formData,
-      productCount: editingCategory ? editingCategory.productCount : 0
-    };
-
     if (editingCategory) {
-      setCategories(categories.map(c => c.id === editingCategory.id ? newCategory : c));
-      toast.success("Category updated successfully!");
+      updateCategory.mutate({
+        id: editingCategory.id,
+        name: formData.name,
+        description: formData.description
+      });
     } else {
-      setCategories([...categories, newCategory]);
-      toast.success("Category added successfully!");
+      createCategory.mutate({
+        name: formData.name,
+        description: formData.description
+      });
     }
 
     setShowDialog(false);
@@ -62,22 +66,37 @@ const Categories = () => {
     setEditingCategory(null);
   };
 
-  const handleEdit = (category: any) => {
+  const handleEdit = (category: CategoryWithProductCount) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
-      description: category.description
+      description: category.description || ""
     });
     setShowDialog(true);
   };
 
-  const handleDelete = (id: number) => {
-    setCategories(categories.filter(c => c.id !== id));
-    toast.success("Category deleted successfully!");
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this category? This action cannot be undone.")) {
+      deleteCategory.mutate(id);
+    }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
+        <AdminSidebar />
+        <main className="flex-1 p-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading categories...</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
       <AdminSidebar />
       
       <main className="flex-1 p-6">
@@ -128,8 +147,19 @@ const Categories = () => {
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                    {editingCategory ? "Update" : "Add"} Category
+                  <Button 
+                    type="submit" 
+                    className="bg-orange-500 hover:bg-orange-600"
+                    disabled={createCategory.isPending || updateCategory.isPending}
+                  >
+                    {(createCategory.isPending || updateCategory.isPending) ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        {editingCategory ? "Updating..." : "Adding..."}
+                      </>
+                    ) : (
+                      editingCategory ? "Update" : "Add"
+                    )} Category
                   </Button>
                 </div>
               </form>
@@ -137,50 +167,77 @@ const Categories = () => {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((category) => (
-            <Card key={category.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                      <FolderOpen className="h-6 w-6 text-orange-500" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{category.name}</CardTitle>
-                      <p className="text-sm text-gray-600">{category.productCount} products</p>
+        {categories && categories.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center">
+              <FolderOpen className="h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No categories found</h3>
+              <p className="text-gray-500 mb-4">Start by creating your first category to organize your menu items.</p>
+              <Button 
+                className="bg-orange-500 hover:bg-orange-600" 
+                onClick={() => setShowDialog(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Category
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories?.map((category) => (
+              <Card key={category.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                        <FolderOpen className="h-6 w-6 text-orange-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{category.name}</CardTitle>
+                        <p className="text-sm text-gray-600">
+                          {category.product_count} product{category.product_count !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                <p className="text-gray-600 mb-4">{category.description}</p>
+                </CardHeader>
                 
-                <div className="flex space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(category)}
-                    className="flex-1"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(category.id)}
-                    className="flex-1"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">
+                    {category.description || "No description provided"}
+                  </p>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(category)}
+                      className="flex-1"
+                      disabled={updateCategory.isPending}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(category.id)}
+                      className="flex-1"
+                      disabled={deleteCategory.isPending}
+                    >
+                      {deleteCategory.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-1" />
+                      )}
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

@@ -1,15 +1,18 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { Bike, User, Gift } from "lucide-react";
+import { Bike, User, Gift, Loader2 } from "lucide-react";
 import colors from "@/theme/colors";
+import { useDeliverySettings, useUpdateDeliverySettings } from "@/hooks/useDeliverySettings";
 
 const DeliverySettings = () => {
+  const { data: deliverySettings, isLoading } = useDeliverySettings();
+  const updateDeliverySettings = useUpdateDeliverySettings();
+
   const [settings, setSettings] = useState({
     minDeliveryTime: 25,
     maxDeliveryTime: 30,
@@ -18,17 +21,53 @@ const DeliverySettings = () => {
     freeDeliveryThreshold: 1000
   });
 
+  // Update local state when data is loaded from database
+  useEffect(() => {
+    if (deliverySettings) {
+      setSettings({
+        minDeliveryTime: deliverySettings.estimatedDeliveryTime || 25,
+        maxDeliveryTime: (deliverySettings.estimatedDeliveryTime || 25) + 5,
+        deliveryCharges: deliverySettings.deliveryFee || 150,
+        freeDeliveryEnabled: deliverySettings.enableFreeDelivery || false,
+        freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold || 1000
+      });
+    }
+  }, [deliverySettings]);
+
   const handleSave = () => {
-    localStorage.setItem("deliverySettings", JSON.stringify(settings));
-    toast.success("Delivery settings updated successfully!");
+    const updatedSettings = {
+      deliveryFee: settings.deliveryCharges,
+      freeDeliveryThreshold: settings.freeDeliveryThreshold,
+      deliveryRadius: deliverySettings?.deliveryRadius || 10,
+      estimatedDeliveryTime: settings.minDeliveryTime,
+      enableFreeDelivery: settings.freeDeliveryEnabled
+    };
+
+    updateDeliverySettings.mutate(updatedSettings);
   };
 
   const handleReset = () => {
-    const savedSettings = localStorage.getItem("deliverySettings");
-    if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
+    if (deliverySettings) {
+      setSettings({
+        minDeliveryTime: deliverySettings.estimatedDeliveryTime || 25,
+        maxDeliveryTime: (deliverySettings.estimatedDeliveryTime || 25) + 5,
+        deliveryCharges: deliverySettings.deliveryFee || 150,
+        freeDeliveryEnabled: deliverySettings.enableFreeDelivery || false,
+        freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold || 1000
+      });
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card style={{ backgroundColor: colors.backgrounds.card }}>
+        <CardContent className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading delivery settings...</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card style={{ backgroundColor: colors.backgrounds.card }}>
@@ -121,8 +160,19 @@ const DeliverySettings = () => {
         </div>
 
         <div className="flex space-x-2">
-          <Button onClick={handleSave} style={{ backgroundColor: colors.primary[500] }}>
-            Save Settings
+          <Button 
+            onClick={handleSave} 
+            style={{ backgroundColor: colors.primary[500] }}
+            disabled={updateDeliverySettings.isPending}
+          >
+            {updateDeliverySettings.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
           </Button>
           <Button onClick={handleReset} variant="outline">
             Reset
