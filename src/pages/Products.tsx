@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,103 +12,74 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { toast } from "sonner";
 import colors from "@/theme/colors";
+import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductVariant {
   name: string;
-  price: number;
+  regularPrice: number;
   offerPrice: number;
 }
 
 interface ProductAddon {
   name: string;
-  price: number;
+  additionalPrice: number;
 }
 
-interface Product {
-  id: number;
+interface ProductFormData {
   name: string;
-  price: number;
-  offerPrice: number;
-  category: string;
-  availability: boolean;
+  category_id: string;
   description: string;
+  image_url: string;
+  stockType: 'unlimited' | 'fixed';
+  stock_quantity?: number;
+  is_available: boolean;
+  pricingMode: 'single' | 'variants';
+  price?: number;
   variants: ProductVariant[];
   addons: ProductAddon[];
-  image: string;
-  stockType: 'unlimited' | 'fixed';
-  unitsInStock?: number;
+  enableAddons: boolean;
 }
 
 const Products = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 1,
-      name: "Chicken Burger",
-      price: 1299,
-      offerPrice: 999,
-      category: "Burgers",
-      availability: true,
-      description: "Juicy chicken burger with fresh lettuce and tomatoes",
-      variants: [
-        { name: "Regular", price: 1299, offerPrice: 999 },
-        { name: "Large", price: 1599, offerPrice: 1299 }
-      ],
-      addons: [
-        { name: "Extra Cheese", price: 150 },
-        { name: "Extra Patty", price: 300 }
-      ],
-      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop",
-      stockType: 'unlimited'
-    },
-    {
-      id: 2,
-      name: "Margherita Pizza",
-      price: 1599,
-      offerPrice: 1299,
-      category: "Pizza",
-      availability: true,
-      description: "Classic pizza with fresh mozzarella and basil",
-      variants: [
-        { name: "Small", price: 1299, offerPrice: 999 },
-        { name: "Medium", price: 1599, offerPrice: 1299 },
-        { name: "Large", price: 1999, offerPrice: 1599 }
-      ],
-      addons: [
-        { name: "Extra Cheese", price: 200 },
-        { name: "Olives", price: 150 },
-        { name: "Mushrooms", price: 180 }
-      ],
-      image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
-      stockType: 'fixed',
-      unitsInStock: 25
-    }
-  ]);
-
-  const [categories] = useState(["Burgers", "Pizza", "Chicken", "Beverages", "Desserts"]);
+  const { data: products = [], isLoading, refetch } = useProducts();
+  const { data: categories = [] } = useCategories();
+  
   const [showDialog, setShowDialog] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [formData, setFormData] = useState<ProductFormData>({
     name: "",
-    price: "",
-    offerPrice: "",
-    category: "",
-    availability: true,
+    category_id: "",
     description: "",
-    image: "",
-    stockType: 'unlimited' as 'unlimited' | 'fixed',
-    unitsInStock: ""
+    image_url: "",
+    stockType: 'unlimited',
+    stock_quantity: undefined,
+    is_available: true,
+    pricingMode: 'single',
+    price: undefined,
+    variants: [],
+    addons: [],
+    enableAddons: false
   });
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [addons, setAddons] = useState<ProductAddon[]>([]);
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", offerPrice: "" });
-  const [newAddon, setNewAddon] = useState({ name: "", price: "" });
-  const [pricingMode, setPricingMode] = useState<'single' | 'variants'>('single');
-  const [enableAddons, setEnableAddons] = useState(false);
+
+  const [newVariant, setNewVariant] = useState({ 
+    name: "", 
+    regularPrice: "", 
+    offerPrice: "" 
+  });
+  
+  const [newAddon, setNewAddon] = useState({ 
+    name: "", 
+    additionalPrice: "" 
+  });
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("adminLoggedIn");
@@ -116,204 +88,356 @@ const Products = () => {
     }
   }, [navigate]);
 
-  // Helper function to get the lowest price for display
-  const getLowestPrice = (product: Product) => {
-    if (product.variants && product.variants.length > 0) {
-      const lowestVariantPrice = Math.min(...product.variants.map(v => v.offerPrice));
-      return lowestVariantPrice;
-    }
-    return product.offerPrice;
-  };
-
-  // Helper function to get display price for summary
-  const getDisplayPrice = () => {
-    if (pricingMode === 'single') {
-      return formData.offerPrice ? `PKR ${formData.offerPrice}` : 'Not set';
-    } else if (variants.length > 0) {
-      const lowest = Math.min(...variants.map(v => v.offerPrice));
-      return `From PKR ${lowest}`;
-    }
-    return 'Not set';
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Enhanced validation for required fields
+  const validateForm = (): boolean => {
+    // Basic field validation
     if (!formData.name.trim()) {
       toast.error("Product name is required");
-      return;
+      return false;
     }
     
-    if (!formData.category) {
+    if (!formData.category_id) {
       toast.error("Category is required");
-      return;
+      return false;
     }
     
     if (!formData.description.trim()) {
       toast.error("Description is required");
-      return;
+      return false;
     }
     
-    if (!formData.image.trim()) {
+    if (!formData.image_url.trim()) {
       toast.error("Image URL is required");
-      return;
+      return false;
     }
+
+    // Stock validation
+    if (formData.stockType === 'fixed') {
+      if (!formData.stock_quantity || formData.stock_quantity < 0) {
+        toast.error("Stock quantity must be ≥ 0 for fixed units");
+        return false;
+      }
+    }
+
+    // Pricing validation
+    if (formData.pricingMode === 'single') {
+      if (!formData.price || formData.price < 0) {
+        toast.error("Price must be ≥ 0");
+        return false;
+      }
+    } else if (formData.pricingMode === 'variants') {
+      if (formData.variants.length === 0) {
+        toast.error("At least one variant is required");
+        return false;
+      }
+      
+      // Validate each variant
+      for (const variant of formData.variants) {
+        if (variant.regularPrice < 0) {
+          toast.error(`Regular price must be ≥ 0 for variant "${variant.name}"`);
+          return false;
+        }
+        if (variant.offerPrice < 0) {
+          toast.error(`Offer price must be ≥ 0 for variant "${variant.name}"`);
+          return false;
+        }
+        if (variant.offerPrice > variant.regularPrice) {
+          toast.error(`Offer price must be ≤ regular price for variant "${variant.name}"`);
+          return false;
+        }
+      }
+    }
+
+    // Add-ons validation
+    if (formData.enableAddons) {
+      for (const addon of formData.addons) {
+        if (addon.additionalPrice < 0) {
+          toast.error(`Additional price must be ≥ 0 for add-on "${addon.name}"`);
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Validation: pricing mode requirements
-    if (pricingMode === 'single' && (!formData.price || !formData.offerPrice)) {
-      toast.error("Regular Price and Offer Price are required for single pricing");
+    if (!validateForm()) {
       return;
     }
 
-    if (pricingMode === 'variants' && variants.length === 0) {
-      toast.error("At least one variant is required when using variant pricing");
-      return;
+    setIsSubmitting(true);
+
+    try {
+      // Prepare variants data
+      const variantsData = formData.pricingMode === 'variants' ? 
+        formData.variants.map(v => ({
+          name: v.name,
+          price: v.regularPrice,
+          offer_price: v.offerPrice
+        })) : [];
+
+      // Prepare addons data
+      const addonsData = formData.enableAddons ? 
+        formData.addons.map(a => ({
+          name: a.name,
+          price: a.additionalPrice
+        })) : [];
+
+      const productData = {
+        name: formData.name,
+        category_id: formData.category_id,
+        description: formData.description,
+        image_url: formData.image_url,
+        price: formData.pricingMode === 'single' ? formData.price : 0,
+        stock_quantity: formData.stockType === 'fixed' ? formData.stock_quantity : null,
+        is_available: formData.stockType === 'fixed' ? 
+          (formData.stock_quantity! > 0) : formData.is_available,
+        variants: {
+          pricing_mode: formData.pricingMode,
+          variants: variantsData,
+          addons: addonsData
+        }
+      };
+
+      let result;
+      if (editingProduct) {
+        result = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id)
+          .select()
+          .single();
+      } else {
+        result = await supabase
+          .from('products')
+          .insert([productData])
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      toast.success(editingProduct ? "Product updated successfully!" : "Product added successfully!");
+      setShowDialog(false);
+      resetForm();
+      refetch();
+      
+    } catch (error: any) {
+      console.error("Error saving product:", error);
+      toast.error(`Failed to ${editingProduct ? 'update' : 'add'} product: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Validation for fixed stock
-    if (formData.stockType === 'fixed' && !formData.unitsInStock) {
-      toast.error("Units in stock is required for fixed stock type");
-      return;
-    }
-
-    const unitsInStock = formData.stockType === 'fixed' ? parseInt(formData.unitsInStock) : undefined;
-    const availability = formData.stockType === 'fixed' ? (unitsInStock! > 0) : formData.availability;
-    
-    const newProduct: Product = {
-      id: editingProduct ? editingProduct.id : Date.now(),
-      ...formData,
-      price: pricingMode === 'single' ? parseFloat(formData.price) : 0,
-      offerPrice: pricingMode === 'single' ? parseFloat(formData.offerPrice) : 0,
-      availability,
-      variants: pricingMode === 'variants' ? variants : [],
-      addons: enableAddons ? addons : [],
-      unitsInStock
-    };
-
-    if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? newProduct : p));
-      toast.success("Product updated successfully!");
-    } else {
-      setProducts([...products, newProduct]);
-      toast.success("Product added successfully!");
-    }
-
-    setShowDialog(false);
-    resetForm();
   };
 
   const resetForm = () => {
     setFormData({
       name: "",
-      price: "",
-      offerPrice: "",
-      category: "",
-      availability: true,
+      category_id: "",
       description: "",
-      image: "",
+      image_url: "",
       stockType: 'unlimited',
-      unitsInStock: ""
+      stock_quantity: undefined,
+      is_available: true,
+      pricingMode: 'single',
+      price: undefined,
+      variants: [],
+      addons: [],
+      enableAddons: false
     });
-    setVariants([]);
-    setAddons([]);
-    setNewVariant({ name: "", price: "", offerPrice: "" });
-    setNewAddon({ name: "", price: "" });
+    setNewVariant({ name: "", regularPrice: "", offerPrice: "" });
+    setNewAddon({ name: "", additionalPrice: "" });
     setEditingProduct(null);
-    setPricingMode('single');
-    setEnableAddons(false);
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: any) => {
     setEditingProduct(product);
+    
+    const variants = product.variants?.variants || [];
+    const addons = product.variants?.addons || [];
+    
     setFormData({
       name: product.name,
-      price: product.price.toString(),
-      offerPrice: product.offerPrice.toString(),
-      category: product.category,
-      availability: product.availability,
-      description: product.description,
-      image: product.image,
-      stockType: product.stockType,
-      unitsInStock: product.unitsInStock?.toString() || ""
+      category_id: product.category_id || "",
+      description: product.description || "",
+      image_url: product.image_url || "",
+      stockType: product.stock_quantity !== null ? 'fixed' : 'unlimited',
+      stock_quantity: product.stock_quantity || undefined,
+      is_available: product.is_available,
+      pricingMode: product.variants?.pricing_mode || 'single',
+      price: product.price || undefined,
+      variants: variants.map((v: any) => ({
+        name: v.name,
+        regularPrice: v.price,
+        offerPrice: v.offer_price
+      })),
+      addons: addons.map((a: any) => ({
+        name: a.name,
+        additionalPrice: a.price
+      })),
+      enableAddons: addons.length > 0
     });
-    setVariants(product.variants);
-    setAddons(product.addons);
-    setPricingMode(product.variants.length > 0 ? 'variants' : 'single');
-    setEnableAddons(product.addons.length > 0);
+    
     setShowDialog(true);
   };
 
-  const handleDelete = (id: number) => {
-    setProducts(products.filter(p => p.id !== id));
-    toast.success("Product deleted successfully!");
-  };
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
 
-  const toggleAvailability = (id: number) => {
-    setProducts(products.map(p => {
-      if (p.id === id) {
-        // For fixed stock, don't allow manual toggle if stock is 0
-        if (p.stockType === 'fixed' && p.unitsInStock === 0) {
-          toast.error("Cannot mark as available - no units in stock");
-          return p;
-        }
-        return { ...p, availability: !p.availability };
-      }
-      return p;
-    }));
-    const product = products.find(p => p.id === id);
-    if (product && (product.stockType === 'unlimited' || product.unitsInStock! > 0)) {
-      toast.success(`${product?.name} marked as ${!product?.availability ? 'Available' : 'Out of Stock'}`);
+      if (error) throw error;
+
+      toast.success("Product deleted successfully!");
+      refetch();
+    } catch (error: any) {
+      console.error("Error deleting product:", error);
+      toast.error(`Failed to delete product: ${error.message}`);
     }
   };
 
-  const updateStock = (id: number, newStock: number) => {
-    setProducts(products.map(p => {
-      if (p.id === id && p.stockType === 'fixed') {
-        const availability = newStock > 0;
-        return { ...p, unitsInStock: newStock, availability };
-      }
-      return p;
-    }));
-    
-    const product = products.find(p => p.id === id);
-    if (product) {
-      if (newStock === 0) {
-        toast.info(`${product.name} is now out of stock`);
-      } else if (product.unitsInStock === 0 && newStock > 0) {
-        toast.success(`${product.name} is now available`);
-      }
+  const toggleAvailability = async (id: string, currentAvailability: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_available: !currentAvailability })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success(`Product marked as ${!currentAvailability ? 'Available' : 'Out of Stock'}`);
+      refetch();
+    } catch (error: any) {
+      console.error("Error updating availability:", error);
+      toast.error(`Failed to update availability: ${error.message}`);
+    }
+  };
+
+  const updateStock = async (id: string, newStock: number) => {
+    if (newStock < 0) {
+      toast.error("Stock quantity must be ≥ 0");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ 
+          stock_quantity: newStock,
+          is_available: newStock > 0
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Stock updated successfully!");
+      refetch();
+    } catch (error: any) {
+      console.error("Error updating stock:", error);
+      toast.error(`Failed to update stock: ${error.message}`);
     }
   };
 
   const addVariant = () => {
-    if (newVariant.name && newVariant.price && newVariant.offerPrice) {
-      setVariants([...variants, {
-        name: newVariant.name,
-        price: parseFloat(newVariant.price),
-        offerPrice: parseFloat(newVariant.offerPrice)
-      }]);
-      setNewVariant({ name: "", price: "", offerPrice: "" });
+    const regularPrice = parseFloat(newVariant.regularPrice);
+    const offerPrice = parseFloat(newVariant.offerPrice);
+
+    if (!newVariant.name || !newVariant.regularPrice || !newVariant.offerPrice) {
+      toast.error("All variant fields are required");
+      return;
     }
+
+    if (regularPrice < 0) {
+      toast.error("Regular price must be ≥ 0");
+      return;
+    }
+
+    if (offerPrice < 0) {
+      toast.error("Offer price must be ≥ 0");
+      return;
+    }
+
+    if (offerPrice > regularPrice) {
+      toast.error("Offer price must be ≤ regular price");
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      variants: [...prev.variants, {
+        name: newVariant.name,
+        regularPrice,
+        offerPrice
+      }]
+    }));
+    setNewVariant({ name: "", regularPrice: "", offerPrice: "" });
   };
 
   const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index)
+    }));
   };
 
   const addAddon = () => {
-    if (newAddon.name && newAddon.price) {
-      setAddons([...addons, {
-        name: newAddon.name,
-        price: parseFloat(newAddon.price)
-      }]);
-      setNewAddon({ name: "", price: "" });
+    const additionalPrice = parseFloat(newAddon.additionalPrice);
+
+    if (!newAddon.name || !newAddon.additionalPrice) {
+      toast.error("All add-on fields are required");
+      return;
     }
+
+    if (additionalPrice < 0) {
+      toast.error("Additional price must be ≥ 0");
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      addons: [...prev.addons, {
+        name: newAddon.name,
+        additionalPrice
+      }]
+    }));
+    setNewAddon({ name: "", additionalPrice: "" });
   };
 
   const removeAddon = (index: number) => {
-    setAddons(addons.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      addons: prev.addons.filter((_, i) => i !== index)
+    }));
   };
+
+  const getDisplayPrice = (product: any) => {
+    const variants = product.variants?.variants || [];
+    if (variants.length > 0) {
+      const lowest = Math.min(...variants.map((v: any) => v.offer_price));
+      return `From PKR ${lowest}`;
+    }
+    return `PKR ${product.price}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
+        <AdminSidebar />
+        <main className="flex-1 p-6 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading products...</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: colors.backgrounds.main }}>
@@ -357,8 +481,8 @@ const Products = () => {
                   <div>
                     <Label htmlFor="category">Category *</Label>
                     <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({...formData, category: value})}
+                      value={formData.category_id}
+                      onValueChange={(value) => setFormData({...formData, category_id: value})}
                       required
                     >
                       <SelectTrigger>
@@ -366,7 +490,7 @@ const Products = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -390,8 +514,8 @@ const Products = () => {
                     id="image"
                     type="url"
                     placeholder="https://example.com/image.jpg"
-                    value={formData.image}
-                    onChange={(e) => setFormData({...formData, image: e.target.value})}
+                    value={formData.image_url}
+                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
                     required
                   />
                 </div>
@@ -425,8 +549,8 @@ const Products = () => {
                             id="quantity"
                             type="number"
                             min="0"
-                            value={formData.unitsInStock}
-                            onChange={(e) => setFormData({...formData, unitsInStock: e.target.value})}
+                            value={formData.stock_quantity || ""}
+                            onChange={(e) => setFormData({...formData, stock_quantity: parseInt(e.target.value) || 0})}
                             className="w-24"
                             required
                           />
@@ -438,11 +562,11 @@ const Products = () => {
                       <div className="flex items-center space-x-2 mt-4">
                         <Switch
                           id="availability"
-                          checked={formData.availability}
-                          onCheckedChange={(checked) => setFormData({...formData, availability: checked})}
+                          checked={formData.is_available}
+                          onCheckedChange={(checked) => setFormData({...formData, is_available: checked})}
                         />
                         <Label htmlFor="availability">
-                          Product Available {formData.availability ? '(In Stock)' : '(Out of Stock)'}
+                          Product Available {formData.is_available ? '(In Stock)' : '(Out of Stock)'}
                         </Label>
                       </div>
                     )}
@@ -459,22 +583,22 @@ const Products = () => {
                       <button
                         type="button"
                         className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                          pricingMode === 'single'
+                          formData.pricingMode === 'single'
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700'
                         }`}
-                        onClick={() => setPricingMode('single')}
+                        onClick={() => setFormData({...formData, pricingMode: 'single'})}
                       >
                         Single price (no variants)
                       </button>
                       <button
                         type="button"
                         className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                          pricingMode === 'variants'
+                          formData.pricingMode === 'variants'
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700'
                         }`}
-                        onClick={() => setPricingMode('variants')}
+                        onClick={() => setFormData({...formData, pricingMode: 'variants'})}
                       >
                         Has variants
                       </button>
@@ -483,41 +607,30 @@ const Products = () => {
                 </Card>
 
                 {/* Base Pricing Card - Show only when single pricing mode */}
-                {pricingMode === 'single' && (
+                {formData.pricingMode === 'single' && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Base Pricing</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="price">Regular Price (PKR) *</Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: e.target.value})}
-                            required
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="offerPrice">Offer Price (PKR) *</Label>
-                          <Input
-                            id="offerPrice"
-                            type="number"
-                            value={formData.offerPrice}
-                            onChange={(e) => setFormData({...formData, offerPrice: e.target.value})}
-                            required
-                          />
-                        </div>
+                      <div>
+                        <Label htmlFor="price">Price (PKR) *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.price || ""}
+                          onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
+                          required
+                        />
                       </div>
                     </CardContent>
                   </Card>
                 )}
 
                 {/* Variants Table - Show only when variants pricing mode */}
-                {pricingMode === 'variants' && (
+                {formData.pricingMode === 'variants' && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Variants</CardTitle>
@@ -537,14 +650,18 @@ const Products = () => {
                             <Label>Regular Price (PKR)</Label>
                             <Input
                               type="number"
-                              value={newVariant.price}
-                              onChange={(e) => setNewVariant({...newVariant, price: e.target.value})}
+                              min="0"
+                              step="0.01"
+                              value={newVariant.regularPrice}
+                              onChange={(e) => setNewVariant({...newVariant, regularPrice: e.target.value})}
                             />
                           </div>
                           <div>
                             <Label>Offer Price (PKR)</Label>
                             <Input
                               type="number"
+                              min="0"
+                              step="0.01"
                               value={newVariant.offerPrice}
                               onChange={(e) => setNewVariant({...newVariant, offerPrice: e.target.value})}
                             />
@@ -554,7 +671,7 @@ const Products = () => {
                           </Button>
                         </div>
 
-                        {variants.length > 0 && (
+                        {formData.variants.length > 0 && (
                           <div className="border rounded-lg overflow-hidden">
                             <table className="w-full">
                               <thead className="bg-gray-50">
@@ -566,10 +683,10 @@ const Products = () => {
                                 </tr>
                               </thead>
                               <tbody>
-                                {variants.map((variant, index) => (
+                                {formData.variants.map((variant, index) => (
                                   <tr key={index} className="border-t">
                                     <td className="px-4 py-2">{variant.name}</td>
-                                    <td className="px-4 py-2">PKR {variant.price}</td>
+                                    <td className="px-4 py-2">PKR {variant.regularPrice}</td>
                                     <td className="px-4 py-2">PKR {variant.offerPrice}</td>
                                     <td className="px-4 py-2 text-center">
                                       <Button
@@ -597,13 +714,13 @@ const Products = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="enableAddons"
-                      checked={enableAddons}
-                      onCheckedChange={(checked) => setEnableAddons(checked === true)}
+                      checked={formData.enableAddons}
+                      onCheckedChange={(checked) => setFormData({...formData, enableAddons: checked === true})}
                     />
                     <Label htmlFor="enableAddons">Enable add-ons</Label>
                   </div>
 
-                  {enableAddons && (
+                  {formData.enableAddons && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">Add-ons</CardTitle>
@@ -623,8 +740,10 @@ const Products = () => {
                               <Label>Additional Price (PKR)</Label>
                               <Input
                                 type="number"
-                                value={newAddon.price}
-                                onChange={(e) => setNewAddon({...newAddon, price: e.target.value})}
+                                min="0"
+                                step="0.01"
+                                value={newAddon.additionalPrice}
+                                onChange={(e) => setNewAddon({...newAddon, additionalPrice: e.target.value})}
                               />
                             </div>
                             <Button type="button" onClick={addAddon} style={{ backgroundColor: colors.primary[500] }}>
@@ -632,7 +751,7 @@ const Products = () => {
                             </Button>
                           </div>
 
-                          {addons.length > 0 && (
+                          {formData.addons.length > 0 && (
                             <div className="border rounded-lg overflow-hidden">
                               <table className="w-full">
                                 <thead className="bg-gray-50">
@@ -643,10 +762,10 @@ const Products = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {addons.map((addon, index) => (
+                                  {formData.addons.map((addon, index) => (
                                     <tr key={index} className="border-t">
                                       <td className="px-4 py-2">{addon.name}</td>
-                                      <td className="px-4 py-2">PKR {addon.price}</td>
+                                      <td className="px-4 py-2">PKR {addon.additionalPrice}</td>
                                       <td className="px-4 py-2 text-center">
                                         <Button
                                           type="button"
@@ -669,23 +788,26 @@ const Products = () => {
                   )}
                 </div>
 
-                {/* Live Summary Strip */}
-                <div className="sticky bottom-0 bg-gray-50 border-t p-4 -mx-6 -mb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="text-sm text-gray-600 space-x-4">
-                      <span><strong>Stock:</strong> {formData.stockType === 'unlimited' ? 'Unlimited' : `Fixed: ${formData.unitsInStock || 0} left`}</span>
-                      <span><strong>Display price:</strong> {getDisplayPrice()}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="ghost" onClick={() => setShowDialog(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" style={{ backgroundColor: colors.primary[500] }} className="hover:opacity-90">
-                      {editingProduct ? "Update" : "Add"} Product
-                    </Button>
-                  </div>
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="ghost" onClick={() => setShowDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    style={{ backgroundColor: colors.primary[500] }} 
+                    className="hover:opacity-90"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        {editingProduct ? "Updating..." : "Adding..."}
+                      </>
+                    ) : (
+                      editingProduct ? "Update Product" : "Add Product"
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -697,39 +819,38 @@ const Products = () => {
             <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" style={{ backgroundColor: colors.backgrounds.card }}>
               <div className="relative">
                 <img
-                  src={product.image}
+                  src={product.image_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"}
                   alt={product.name}
                   className="w-full h-48 object-cover"
                 />
                 <Badge 
                   className={`absolute top-2 right-2 ${
-                    product.availability ? 'bg-green-500' : 'bg-red-500'
+                    product.is_available ? 'bg-green-500' : 'bg-red-500'
                   }`}
                 >
-                  {product.availability ? 'Available' : 'Out of Stock'}
+                  {product.is_available ? 'Available' : 'Out of Stock'}
                 </Badge>
               </div>
               
               <CardContent className="p-4">
                 <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
                 <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                <Badge variant="secondary" className="mb-2">{product.category}</Badge>
                 
                 {/* Stock Display */}
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-600">Stock:</span>
                   <span className="text-sm font-medium">
-                    {product.stockType === 'unlimited' ? '∞' : `${product.unitsInStock || 0} units`}
+                    {product.stock_quantity !== null ? `${product.stock_quantity} units` : '∞'}
                   </span>
                 </div>
 
                 {/* Stock Management for Fixed Stock */}
-                {product.stockType === 'fixed' && (
+                {product.stock_quantity !== null && (
                   <div className="flex items-center gap-2 mb-3">
                     <Input
                       type="number"
                       min="0"
-                      value={product.unitsInStock || 0}
+                      value={product.stock_quantity}
                       onChange={(e) => updateStock(product.id, parseInt(e.target.value) || 0)}
                       className="w-20 h-8 text-sm"
                     />
@@ -739,66 +860,22 @@ const Products = () => {
                 
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    {product.variants && product.variants.length > 0 ? (
-                      <span className="text-lg font-bold" style={{ color: colors.primary[500] }}>
-                        From PKR {getLowestPrice(product)}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-lg font-bold" style={{ color: colors.primary[500] }}>
-                          PKR {product.offerPrice}
-                        </span>
-                        {product.price !== product.offerPrice && (
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            PKR {product.price}
-                          </span>
-                        )}
-                      </>
-                    )}
+                    <span className="text-lg font-bold" style={{ color: colors.primary[500] }}>
+                      {getDisplayPrice(product)}
+                    </span>
                   </div>
                 </div>
-
-                {product.variants.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-600 mb-1">Variants:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {product.variants.map((variant, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {variant.name} - PKR {variant.offerPrice}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {product.addons.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-600 mb-1">Add-ons:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {product.addons.slice(0, 2).map((addon, index) => (
-                        <Badge key={index} variant="outline" className="text-xs bg-green-50">
-                          +{addon.name} (+PKR {addon.price})
-                        </Badge>
-                      ))}
-                      {product.addons.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{product.addons.length - 2} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
                 
                 <div className="flex space-x-2 mb-2">
                   <Button
                     size="sm"
-                    variant={product.availability ? "outline" : "default"}
-                    onClick={() => toggleAvailability(product.id)}
+                    variant={product.is_available ? "outline" : "default"}
+                    onClick={() => toggleAvailability(product.id, product.is_available)}
                     className="flex-1"
-                    style={!product.availability ? { backgroundColor: colors.status.success } : {}}
-                    disabled={product.stockType === 'fixed' && product.unitsInStock === 0 && !product.availability}
+                    style={!product.is_available ? { backgroundColor: colors.status.success } : {}}
+                    disabled={product.stock_quantity === 0 && !product.is_available}
                   >
-                    {product.availability ? 'Mark Out of Stock' : 'Mark Available'}
+                    {product.is_available ? 'Mark Out of Stock' : 'Mark Available'}
                   </Button>
                 </div>
 
