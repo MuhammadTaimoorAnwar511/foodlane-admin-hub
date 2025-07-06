@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,6 +49,24 @@ export const useCreateDeal = () => {
   return useMutation({
     mutationFn: async (dealData: Omit<Deal, "id" | "created_at" | "updated_at">) => {
       console.log("Creating deal:", dealData);
+      
+      // Frontend validation
+      if (dealData.price < 0) {
+        throw new Error("Price must be greater than or equal to 0");
+      }
+      
+      if (dealData.offer_price !== undefined && dealData.offer_price < 0) {
+        throw new Error("Offer price must be greater than or equal to 0");
+      }
+      
+      if (dealData.offer_price !== undefined && dealData.offer_price > dealData.price) {
+        throw new Error("Offer price must be less than or equal to regular price");
+      }
+      
+      if (dealData.discount_percent !== undefined && (dealData.discount_percent < 0 || dealData.discount_percent > 100)) {
+        throw new Error("Discount percentage must be between 0 and 100");
+      }
+      
       const { data, error } = await supabase
         .from("deals")
         .insert([dealData])
@@ -70,7 +87,7 @@ export const useCreateDeal = () => {
     },
     onError: (error) => {
       console.error("Failed to create deal:", error);
-      toast.error("Failed to create deal");
+      toast.error(error.message || "Failed to create deal");
     },
   });
 };
@@ -81,6 +98,24 @@ export const useUpdateDeal = () => {
   return useMutation({
     mutationFn: async ({ id, ...dealData }: Partial<Deal> & { id: string }) => {
       console.log("Updating deal:", id, dealData);
+      
+      // Frontend validation
+      if (dealData.price !== undefined && dealData.price < 0) {
+        throw new Error("Price must be greater than or equal to 0");
+      }
+      
+      if (dealData.offer_price !== undefined && dealData.offer_price < 0) {
+        throw new Error("Offer price must be greater than or equal to 0");
+      }
+      
+      if (dealData.offer_price !== undefined && dealData.price !== undefined && dealData.offer_price > dealData.price) {
+        throw new Error("Offer price must be less than or equal to regular price");
+      }
+      
+      if (dealData.discount_percent !== undefined && (dealData.discount_percent < 0 || dealData.discount_percent > 100)) {
+        throw new Error("Discount percentage must be between 0 and 100");
+      }
+      
       const { data, error } = await supabase
         .from("deals")
         .update(dealData)
@@ -102,7 +137,7 @@ export const useUpdateDeal = () => {
     },
     onError: (error) => {
       console.error("Failed to update deal:", error);
-      toast.error("Failed to update deal");
+      toast.error(error.message || "Failed to update deal");
     },
   });
 };

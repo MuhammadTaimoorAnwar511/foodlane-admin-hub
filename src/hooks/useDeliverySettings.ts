@@ -53,9 +53,25 @@ export const useUpdateDeliverySettings = () => {
     mutationFn: async (settings: DeliverySettings) => {
       console.log("Updating delivery settings:", settings);
       
-      // Validation: max delivery time must be greater than min delivery time
+      // Frontend validation with enhanced error messages
+      if (settings.minDeliveryTime < 0) {
+        throw new Error("Minimum delivery time must be greater than or equal to 0");
+      }
+      
+      if (settings.maxDeliveryTime < 0) {
+        throw new Error("Maximum delivery time must be greater than or equal to 0");
+      }
+      
       if (settings.maxDeliveryTime <= settings.minDeliveryTime) {
-        throw new Error("Max delivery time must be greater than min delivery time");
+        throw new Error("Maximum delivery time must be greater than minimum delivery time");
+      }
+      
+      if (settings.deliveryCharges < 0) {
+        throw new Error("Delivery charges must be greater than or equal to 0");
+      }
+      
+      if (settings.freeDeliveryThreshold < 0) {
+        throw new Error("Free delivery threshold must be greater than or equal to 0");
       }
       
       // First check if settings exist

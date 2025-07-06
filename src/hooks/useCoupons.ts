@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,7 +7,7 @@ export interface Coupon {
   code: string;
   name: string;
   description?: string;
-  discount_type: "percentage" | "fixed_amount" | "free_delivery";
+  discount_type: "percentage" | "fixed_amount";
   discount_value: number;
   min_order_amount?: number;
   max_discount_amount?: number;
@@ -50,6 +49,24 @@ export const useCreateCoupon = () => {
   return useMutation({
     mutationFn: async (couponData: Omit<Coupon, "id" | "created_at" | "updated_at">) => {
       console.log("Creating coupon:", couponData);
+      
+      // Frontend validation
+      if (couponData.discount_type === "percentage" && (couponData.discount_value < 0 || couponData.discount_value > 100)) {
+        throw new Error("Percentage discount must be between 0 and 100");
+      }
+      
+      if (couponData.discount_type === "fixed_amount" && couponData.discount_value < 0) {
+        throw new Error("Fixed amount discount must be greater than or equal to 0");
+      }
+      
+      if (couponData.min_order_amount && couponData.min_order_amount < 0) {
+        throw new Error("Minimum order amount must be greater than or equal to 0");
+      }
+      
+      if (couponData.usage_limit && couponData.usage_limit < 0) {
+        throw new Error("Usage limit must be greater than or equal to 0");
+      }
+      
       const { data, error } = await supabase
         .from("coupons")
         .insert([couponData])
@@ -70,7 +87,7 @@ export const useCreateCoupon = () => {
     },
     onError: (error) => {
       console.error("Failed to create coupon:", error);
-      toast.error("Failed to create coupon");
+      toast.error(error.message || "Failed to create coupon");
     },
   });
 };
@@ -81,6 +98,24 @@ export const useUpdateCoupon = () => {
   return useMutation({
     mutationFn: async ({ id, ...couponData }: Partial<Coupon> & { id: string }) => {
       console.log("Updating coupon:", id, couponData);
+      
+      // Frontend validation
+      if (couponData.discount_type === "percentage" && couponData.discount_value !== undefined && (couponData.discount_value < 0 || couponData.discount_value > 100)) {
+        throw new Error("Percentage discount must be between 0 and 100");
+      }
+      
+      if (couponData.discount_type === "fixed_amount" && couponData.discount_value !== undefined && couponData.discount_value < 0) {
+        throw new Error("Fixed amount discount must be greater than or equal to 0");
+      }
+      
+      if (couponData.min_order_amount !== undefined && couponData.min_order_amount < 0) {
+        throw new Error("Minimum order amount must be greater than or equal to 0");
+      }
+      
+      if (couponData.usage_limit !== undefined && couponData.usage_limit < 0) {
+        throw new Error("Usage limit must be greater than or equal to 0");
+      }
+      
       const { data, error } = await supabase
         .from("coupons")
         .update(couponData)
@@ -102,7 +137,7 @@ export const useUpdateCoupon = () => {
     },
     onError: (error) => {
       console.error("Failed to update coupon:", error);
-      toast.error("Failed to update coupon");
+      toast.error(error.message || "Failed to update coupon");
     },
   });
 };
