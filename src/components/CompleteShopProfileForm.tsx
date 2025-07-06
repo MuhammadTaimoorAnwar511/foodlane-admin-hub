@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,14 @@ const CompleteShopProfileForm = () => {
 
   useEffect(() => {
     if (shopData) {
-      setProfile(shopData.profile);
+      // Ensure profile has all required fields with proper defaults
+      setProfile({
+        id: shopData.profile.id,
+        shop_name: shopData.profile.shop_name,
+        tagline: shopData.profile.tagline || "",
+        short_desc: shopData.profile.short_desc || "",
+        about_desc: shopData.profile.about_desc || ""
+      });
       setContacts(shopData.contacts);
       setSocials(shopData.socials);
       setLocation(shopData.location || {
@@ -136,7 +142,7 @@ const CompleteShopProfileForm = () => {
               <Label htmlFor="tagline">Tagline</Label>
               <Input
                 id="tagline"
-                value={profile.tagline || ""}
+                value={profile.tagline}
                 onChange={(e) => setProfile({...profile, tagline: e.target.value})}
                 placeholder="Your shop's tagline"
               />
@@ -147,7 +153,7 @@ const CompleteShopProfileForm = () => {
             <Label htmlFor="shortDesc">Short Description</Label>
             <Textarea
               id="shortDesc"
-              value={profile.short_desc || ""}
+              value={profile.short_desc}
               onChange={(e) => setProfile({...profile, short_desc: e.target.value})}
               placeholder="Brief description for cards and listings"
               rows={2}
@@ -158,7 +164,7 @@ const CompleteShopProfileForm = () => {
             <Label htmlFor="aboutDesc">About Description</Label>
             <Textarea
               id="aboutDesc"
-              value={profile.about_desc || ""}
+              value={profile.about_desc}
               onChange={(e) => setProfile({...profile, about_desc: e.target.value})}
               placeholder="Detailed description for About Us page"
               rows={4}

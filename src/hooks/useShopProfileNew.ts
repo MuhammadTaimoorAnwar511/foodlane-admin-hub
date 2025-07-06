@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface ShopProfileData {
-  id?: string;
+  id: string; // Make id required instead of optional
   shop_name: string;
   tagline?: string;
   short_desc?: string;
@@ -57,7 +57,7 @@ export const useCompleteShopProfile = () => {
       }
 
       // Fetch contact numbers
-      const { data: contacts, error: contactsError } = await supabase
+      const { data: contactsData, error: contactsError } = await supabase
         .from("contact_numbers")
         .select("*")
         .eq("profile_id", profile.id);
@@ -66,6 +66,14 @@ export const useCompleteShopProfile = () => {
         console.error("Error fetching contacts:", contactsError);
         throw contactsError;
       }
+
+      // Type cast the contacts data to ensure proper typing
+      const contacts: ContactNumber[] = (contactsData || []).map(contact => ({
+        id: contact.id,
+        type: contact.type as 'phone' | 'whatsapp', // Type cast to the union type
+        label: contact.label,
+        number: contact.number
+      }));
 
       // Fetch social links
       const { data: socials, error: socialsError } = await supabase
@@ -94,7 +102,7 @@ export const useCompleteShopProfile = () => {
       
       return {
         profile,
-        contacts: contacts || [],
+        contacts,
         socials: socials || [],
         location
       };
