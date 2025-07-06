@@ -168,7 +168,7 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
                 <Label>Discount Type</Label>
                 <Select 
                   value={formData.discount_type} 
-                  onValueChange={(value: "percentage" | "fixed_amount" | "free_delivery") => 
+                  onValueChange={(value: "percentage" | "fixed_amount") => 
                     setFormData(prev => ({ ...prev, discount_type: value }))
                   }
                 >
@@ -188,12 +188,6 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
                         Fixed Amount (PKR)
                       </div>
                     </SelectItem>
-                    <SelectItem value="free_delivery">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Free Delivery
-                      </div>
-                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -201,7 +195,7 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
               <div className="space-y-2">
                 <Label htmlFor="discount_value">
                   Discount Value * 
-                  {formData.discount_type === "percentage" ? " (%)" : formData.discount_type === "fixed_amount" ? " (PKR)" : ""}
+                  {formData.discount_type === "percentage" ? " (%)" : " (PKR)"}
                 </Label>
                 <Input
                   id="discount_value"
@@ -211,7 +205,6 @@ const CouponModal = ({ open, onOpenChange, coupon, onSave }: CouponModalProps) =
                   value={formData.discount_value}
                   onChange={(e) => setFormData(prev => ({ ...prev, discount_value: parseFloat(e.target.value) || 0 }))}
                   placeholder={formData.discount_type === "percentage" ? "20" : "100"}
-                  disabled={formData.discount_type === "free_delivery"}
                 />
               </div>
             </CardContent>

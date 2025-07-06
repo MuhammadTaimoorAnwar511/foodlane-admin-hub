@@ -135,8 +135,6 @@ const Coupons = () => {
         return `${coupon.discount_value}% off`;
       case 'fixed_amount':
         return `PKR ${coupon.discount_value} off`;
-      case 'free_delivery':
-        return 'Free Delivery';
       default:
         return 'Unknown';
     }
