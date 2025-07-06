@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -40,7 +39,8 @@ interface ProductFormData {
   stock_quantity?: number;
   is_available: boolean;
   pricingMode: 'single' | 'variants';
-  price?: number;
+  regularPrice?: number;
+  offerPrice?: number;
   variants: ProductVariant[];
   addons: ProductAddon[];
   enableAddons: boolean;
@@ -64,7 +64,8 @@ const Products = () => {
     stock_quantity: undefined,
     is_available: true,
     pricingMode: 'single',
-    price: undefined,
+    regularPrice: undefined,
+    offerPrice: undefined,
     variants: [],
     addons: [],
     enableAddons: false
@@ -120,8 +121,16 @@ const Products = () => {
 
     // Pricing validation
     if (formData.pricingMode === 'single') {
-      if (!formData.price || formData.price < 0) {
-        toast.error("Price must be ≥ 0");
+      if (!formData.regularPrice || formData.regularPrice < 0) {
+        toast.error("Regular Price must be ≥ 0");
+        return false;
+      }
+      if (!formData.offerPrice || formData.offerPrice < 0) {
+        toast.error("Offer Price must be ≥ 0");
+        return false;
+      }
+      if (formData.offerPrice > formData.regularPrice) {
+        toast.error("Offer Price must be ≤ Regular Price");
         return false;
       }
     } else if (formData.pricingMode === 'variants') {
@@ -190,12 +199,14 @@ const Products = () => {
         category_id: formData.category_id,
         description: formData.description,
         image_url: formData.image_url,
-        price: formData.pricingMode === 'single' ? formData.price : 0,
+        price: formData.pricingMode === 'single' ? formData.offerPrice : 0,
         stock_quantity: formData.stockType === 'fixed' ? formData.stock_quantity : null,
         is_available: formData.stockType === 'fixed' ? 
           (formData.stock_quantity! > 0) : formData.is_available,
         variants: {
           pricing_mode: formData.pricingMode,
+          regular_price: formData.pricingMode === 'single' ? formData.regularPrice : null,
+          offer_price: formData.pricingMode === 'single' ? formData.offerPrice : null,
           variants: variantsData,
           addons: addonsData
         }
@@ -244,7 +255,8 @@ const Products = () => {
       stock_quantity: undefined,
       is_available: true,
       pricingMode: 'single',
-      price: undefined,
+      regularPrice: undefined,
+      offerPrice: undefined,
       variants: [],
       addons: [],
       enableAddons: false
@@ -269,7 +281,8 @@ const Products = () => {
       stock_quantity: product.stock_quantity || undefined,
       is_available: product.is_available,
       pricingMode: product.variants?.pricing_mode || 'single',
-      price: product.price || undefined,
+      regularPrice: product.variants?.regular_price || product.price || undefined,
+      offerPrice: product.variants?.offer_price || product.price || undefined,
       variants: variants.map((v: any) => ({
         name: v.name,
         regularPrice: v.price,
@@ -422,7 +435,8 @@ const Products = () => {
       const lowest = Math.min(...variants.map((v: any) => v.offer_price));
       return `From PKR ${lowest}`;
     }
-    return `PKR ${product.price}`;
+    const offerPrice = product.variants?.offer_price || product.price;
+    return `PKR ${offerPrice}`;
   };
 
   if (isLoading) {
@@ -613,17 +627,31 @@ const Products = () => {
                       <CardTitle className="text-lg">Base Pricing</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div>
-                        <Label htmlFor="price">Price (PKR) *</Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.price || ""}
-                          onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
-                          required
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="regularPrice">Regular Price (PKR) *</Label>
+                          <Input
+                            id="regularPrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.regularPrice || ""}
+                            onChange={(e) => setFormData({...formData, regularPrice: parseFloat(e.target.value) || 0})}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="offerPrice">Offer Price (PKR) *</Label>
+                          <Input
+                            id="offerPrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.offerPrice || ""}
+                            onChange={(e) => setFormData({...formData, offerPrice: parseFloat(e.target.value) || 0})}
+                            required
+                          />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
